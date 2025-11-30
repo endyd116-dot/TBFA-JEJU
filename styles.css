@@ -1,0 +1,253 @@
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Animation Utilities */
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+
+/* --- Resource Popup Content Styles --- */
+
+/* 1. Letter */
+.story-letter .letter-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.story-letter .letter-header h3 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+.story-letter .letter-header .date {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+.story-letter .letter-body {
+    font-family: "Nanum Myeongjo", serif;
+    line-height: 1.8;
+    color: #334155;
+}
+.story-letter .highlight-quote {
+    background: #f8fafc;
+    border-left: 4px solid #0099FF;
+    padding: 16px;
+    margin: 20px 0;
+    font-style: italic;
+}
+.story-letter .letter-footer {
+    text-align: right;
+    font-weight: bold;
+    margin-top: 30px;
+}
+
+/* 2. Donation Plan */
+.donation-plan .plan-summary {
+    background: #f0f9ff;
+    padding: 12px;
+    border-radius: 8px;
+    color: #0077CC;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+.donation-plan .fund-goal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #0099FF;
+}
+.donation-plan .fund-goal .amount {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0099FF;
+}
+.donation-plan .budget-breakdown {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.donation-plan .budget-breakdown li {
+    margin-bottom: 16px;
+}
+.donation-plan .item-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+.donation-plan .item-info span {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.donation-plan .progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.donation-plan .progress-bar div {
+    height: 100%;
+    background: #3b82f6;
+}
+.donation-plan .notice {
+    margin-top: 20px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-align: center;
+}
+
+/* 3. Press Clip */
+.press-clip .article-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.press-clip .article-item {
+    display: block;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.press-clip .article-item:hover {
+    border-color: #0099FF;
+    background: #f8fafc;
+}
+.press-clip .article-item .press {
+    display: inline-block;
+    font-size: 0.7rem;
+    background: #1e293b;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+.press-clip .article-item .title {
+    display: block;
+    font-size: 1.1rem;
+    color: #0f172a;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+.press-clip .article-item .desc {
+    display: block;
+    font-size: 0.875rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+}
+.press-clip .article-item .date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* 4. Status Board */
+.status-board .status-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 20px;
+}
+.status-board .step {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.status-board .step.completed {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+.status-board .step.processing {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.status-board .step .icon {
+    font-size: 1.5rem;
+}
+.status-board .step .text strong {
+    display: block;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+.status-board .step .text span {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+.status-board .action-call {
+    margin-top: 30px;
+    text-align: center;
+    padding: 20px;
+    background: #f0f9ff;
+    border-radius: 16px;
+}
+.status-board .action-call p {
+    margin-bottom: 12px;
+    font-weight: bold;
+    color: #0369a1;
+}
+.status-board .action-call .btn-sign {
+    background: #0099FF;
+    color: white;
+    font-weight: bold;
+    padding: 10px 24px;
+    border-radius: 9999px;
+    transition: background 0.2s;
+}
+.status-board .action-call .btn-sign:hover {
+    background: #0077CC;
+}

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제주중학교 사건 유가족 후원 | 교사유가족 협의회</title>
+    <meta name="description" content="제주중학교 사건 故 현승준 선생님의 명예 회복과 남겨진 유가족(아내와 두 아이)의 생계 및 치유를 위한 공식 후원 페이지입니다.">
+    <meta property="og:title" content="제주중학교 사건 유가족을 지켜주세요">
+    <meta property="og:url" content="#">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop">
+    
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#0099FF', dark: '#0077CC', light: '#E5F5FF' }, 
+                        accent: '#FFD700',
+                        secondary: '#F8F9FA',
+                        text: { main: '#1E293B', sub: '#475569' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                        serif: ['"Nanum Myeongjo"', 'serif'], 
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0, 153, 255, 0.15)',
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    },
+                    keyframes: {
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+                            '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
+                        }
+                    },
+                    animation: {
+                        shake: 'shake 0.5s ease-in-out',
+                        'fade-in-up': 'fadeInUp 1s ease-out forwards'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js" defer></script>
+    <script type="module">
+        import { Tracker } from './tracker.js';
+        document.addEventListener('DOMContentLoaded', () => { Tracker.init(); });
+    </script>
+</head>
+<body class="bg-white text-text-main font-sans antialiased selection:bg-primary selection:text-white overflow-x-hidden">
+
+    <!-- Toast Notification -->
+    <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] pointer-events-none">
+        <div id="toast-notification" class="bg-gray-800/90 backdrop-blur text-white px-6 py-3 rounded-full shadow-xl font-medium -translate-y-24 opacity-0 transition-all duration-500 flex items-center gap-3 min-w-[200px] justify-center">
+            <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+            <span id="toast-message">알림</span>
+        </div>
+    </div>
+
+    <!-- Resource Modal -->
+    <div id="resource-modal" class="fixed inset-0 z-[5000] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm modal-backdrop" data-target="resource-modal"></div>
+        <div class="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative z-10 transform scale-95 transition-all duration-300 max-h-[90vh] flex flex-col">
+            <button class="modal-close-btn absolute top-5 right-5 text-gray-400 hover:text-gray-600 z-20" data-target="resource-modal"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-4 shrink-0">
+                <i data-lucide="file-text" class="w-5 h-5 text-primary"></i>
+                <span id="res-modal-title">자료</span>
+            </h3>
+            <div class="prose prose-sm max-w-none overflow-y-auto p-2 text-gray-700 leading-relaxed custom-scrollbar" id="res-modal-desc"></div>
+        </div>
+    </div>
+
+    <!-- Poster Modal -->
+    <div id="poster-modal" class="fixed inset-0 z-[5000] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-sm modal-backdrop" data-target="poster-modal"></div>
+        <div class="relative z-10 max-w-6xl w-full h-[80vh] flex flex-col md:flex-row gap-4 items-center justify-center pointer-events-none">
+            <div class="relative h-full w-auto max-w-[90%] md:max-w-3xl pointer-events-auto shadow-2xl rounded-xl overflow-hidden bg-black">
+                 <button class="modal-close-btn absolute top-4 right-4 text-white/80 hover:text-white bg-black/50 rounded-full p-2 z-20" data-target="poster-modal"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <img id="poster-modal-img" src="" class="h-full w-full object-contain">
+            </div>
+            <div class="bg-white p-6 rounded-xl pointer-events-auto w-full md:w-64 flex flex-col items-center justify-center text-center shadow-xl animate-fade-in-up delay-100">
+                <h4 class="font-bold text-gray-800 mb-4">캠페인 동참하기</h4>
+                <div id="poster-modal-qr" class="bg-white p-2 border border-gray-200 rounded-lg mb-4"></div>
+                <p class="text-xs text-gray-500 mb-4">QR 코드를 스캔하여<br>후원에 참여해주세요.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="fixed inset-0 z-[5000] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm modal-backdrop" data-target="payment-modal"></div>
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl relative z-10 transform scale-95 transition-all duration-300">
+            <button class="modal-close-btn absolute top-5 right-5 text-gray-400 hover:text-gray-600" data-target="payment-modal"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="coins" class="w-8 h-8"></i></div>
+                <h3 class="text-xl font-bold text-gray-900" id="pay-modal-title">안내</h3>
+                <p class="text-sm text-gray-500 mt-2">안전한 후원을 위해 외부 플랫폼으로 이동합니다.</p>
+            </div>
+            <button id="payment-redirect-btn" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 mb-3">이동하기</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="fixed w-full top-0 z-50 py-4 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <a href="#" class="flex items-center gap-2 group" onclick="window.scrollTo(0,0); return false;">
+                <div class="bg-primary text-white p-1.5 rounded-lg"><i data-lucide="heart-handshake" class="w-6 h-6"></i></div>
+                <div class="flex flex-col">
+                    <span class="font-bold text-lg tracking-tight text-gray-900 leading-none">교사유가족협의회</span>
+                    <span class="text-[10px] text-gray-500 font-medium tracking-wider">Teacher's Family Association</span>
+                </div>
+            </a>
+            <nav class="hidden md:flex gap-8 text-sm font-medium text-text-sub items-center">
+                <a href="#story" class="hover:text-primary transition-colors py-2">현실과 진실</a>
+                <a href="#promises" class="hover:text-primary transition-colors py-2">3가지 약속</a>
+                <a href="#resources" class="hover:text-primary transition-colors py-2">자료 패키지</a>
+                <a href="#community" class="hover:text-primary transition-colors py-2">탄원서 서명</a>
+                <a href="https://blog.naver.com/endy0718/?tab=1" target="_blank" class="flex items-center gap-1 text-[#03C75A] hover:text-[#02b351] font-bold"><i data-lucide="external-link" class="w-3 h-3"></i> 블로그</a>
+            </nav>
+            <a href="#donate" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                <span>후원하기</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero" class="pt-32 pb-20 px-6 min-h-[85vh] flex items-center relative overflow-hidden bg-gradient-to-b from-primary-light/30 to-white">
+        <div class="max-w-7xl mx-auto w-full">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="order-2 lg:order-1 space-y-8 animate-fade-in-up">
+                    <div class="inline-flex items-center gap-2 bg-white border border-blue-100 text-primary px-4 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-sm">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span><span>제주중학교 사건 긴급 지원</span>
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-[1.2] text-gray-900 break-keep"><span id="hero-title-text"></span></h1>
+                    <div class="text-lg text-text-sub leading-relaxed max-w-xl break-keep font-light pl-1" id="hero-subtitle-text"></div>
+                    
+                    <a href="https://blog.naver.com/endy0718/?tab=1" target="_blank" class="block group max-w-md cursor-pointer">
+                        <div class="bg-[#03C75A] hover:bg-[#02b351] text-white p-4 rounded-xl flex items-center gap-4 shadow-lg shadow-green-100 transition-all hover:-translate-y-1">
+                            <div class="bg-white/20 p-2 rounded-lg font-serif font-bold text-lg w-10 h-10 flex items-center justify-center">N</div>
+                            <div>
+                                <p class="font-bold text-sm">교사유가족협의회 공식 블로그</p>
+                                <p class="text-xs opacity-90">사건 일지 및 상세 진행상황 확인하기</p>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-5 h-5 ml-auto opacity-80"></i>
+                        </div>
+                    </a>
+
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <a href="#story" class="bg-white border-2 border-gray-200 text-gray-600 px-8 py-4 rounded-full font-bold hover:border-primary hover:text-primary transition-all">사연 자세히 보기</a>
+                        <a href="#donate" class="bg-primary text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-blue-200 hover:bg-primary-dark transition-all flex items-center gap-2"><i data-lucide="heart" class="w-5 h-5 fill-current"></i> 마음 보태기</a>
+                    </div>
+                </div>
+                <div class="order-1 lg:order-2 relative animate-fade-in-up delay-100">
+                    <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square group bg-gray-100">
+                        <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="Sorrowful Mother" class="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
+                        <div class="absolute bottom-8 left-8 text-white">
+                            <p class="font-serif text-xl italic leading-relaxed">"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Story Section -->
+    <section id="story" class="py-24 bg-white">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="text-center mb-24">
+                <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">The Truth & Reality</h2>
+                <h3 class="text-3xl md:text-4xl font-serif font-bold text-gray-900">우리가 기억해야 할 이야기</h3>
+                <div class="w-16 h-1 bg-primary mx-auto mt-6 rounded-full"></div>
+            </div>
+            <div id="story-container" class="space-y-32"></div>
+        </div>
+    </section>
+
+    <!-- Promises Section -->
+    <section id="promises" class="py-24 bg-secondary relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">Our Mission</h2>
+                <h3 class="text-3xl md:text-4xl font-serif font-bold text-gray-900">가족을 지키는 3가지 약속</h3>
+                <div class="mt-4 text-gray-500 max-w-2xl mx-auto text-lg" id="mission-intro-text"></div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8" id="promises-grid"></div>
+        </div>
+    </section>
+
+    <!-- Plan Section -->
+    <section id="plan" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid lg:grid-cols-2 gap-16 items-start">
+                <div>
+                    <h3 class="text-3xl font-serif font-bold mb-6 text-gray-900">세부 후원 계획</h3>
+                    <p class="text-gray-500 mb-8 leading-relaxed">운영비는 0원이며, 전액 가족 지원에 사용됩니다.</p>
+                    <div class="space-y-4" id="plan-list"></div>
+                </div>
+                <div class="bg-white rounded-[2rem] shadow-soft p-8 md:p-12 border border-gray-100 text-center relative">
+                    <h3 class="text-xl font-bold mb-8 text-gray-800">후원금 예산 배정안</h3>
+                    <div class="w-64 h-64 mx-auto relative mb-6">
+                        <canvas id="budgetChart"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                            <span class="text-sm text-gray-400">총 목표</span>
+                            <span class="text-2xl font-bold text-gray-900" id="total-goal-chart-label">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Resources Section -->
+    <section id="resources" class="py-20 bg-gray-50 border-y border-gray-200">
+        <div class="max-w-7xl mx-auto px-6">
+            <h2 class="text-3xl font-serif font-bold mb-3 text-gray-900">행사 자료 패키지</h2>
+            <p class="text-gray-500 mb-10">투명한 운영을 위한 모든 자료를 확인하세요.</p>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6" id="resources-grid"></div>
+        </div>
+    </section>
+
+    <!-- Poster Gallery -->
+    <section class="py-20 bg-white border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-serif font-bold mb-3 text-gray-900">캠페인 포스터 갤러리</h2>
+                <p class="text-gray-500">이미지를 클릭하여 QR코드를 확인하세요.</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8" id="poster-grid"></div>
+        </div>
+    </section>
+
+    <!-- Community & Petition Section -->
+    <section id="community" class="py-24 bg-white">
+        <div class="max-w-5xl mx-auto px-6">
+            <!-- Comments -->
+            <div class="mb-24">
+                <h3 class="text-2xl font-bold mb-6 text-gray-900 border-b pb-4 flex justify-between items-end">
+                    <span>응원의 한마디</span><span class="text-sm font-normal text-gray-500">관리자 승인 후 노출</span>
+                </h3>
+                <div id="comments-list" class="space-y-4 mb-8 max-h-[400px] overflow-y-auto p-2 bg-gray-50 rounded-xl custom-scrollbar"></div>
+                <form id="comment-form" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row gap-4 mb-4">
+                        <input type="text" id="comment-author" placeholder="이름" class="w-full md:w-1/4 border p-3 rounded-lg bg-gray-50" required>
+                        <input type="text" id="comment-text" placeholder="메시지를 남겨주세요" class="flex-1 border p-3 rounded-lg bg-gray-50" required>
+                    </div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="comment-private" class="rounded w-4 h-4 text-primary">
+                            <label for="comment-private" class="text-sm text-gray-600">비공개</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gray-800 text-white py-3 rounded-lg font-bold">메시지 보내기</button>
+                </form>
+            </div>
+
+            <!-- Petition -->
+            <div class="bg-blue-50 rounded-[2.5rem] p-8 md:p-12 border border-blue-100 relative overflow-hidden">
+                <div class="relative z-10 grid md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm">
+                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="download" class="w-5 h-5 text-gray-400"></i> 1. 양식 받기</h4>
+                        <p class="text-sm text-gray-500 mb-6">AI가 생성한 탄원서 양식을 인쇄하여 서명하세요.</p>
+                        <button id="download-petition-btn" class="w-full border-2 border-primary text-primary py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="printer" class="w-4 h-4"></i> 탄원서 양식 인쇄
+                        </button>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-sm">
+                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="upload" class="w-5 h-5 text-gray-400"></i> 2. 서명 제출</h4>
+                        <form id="petition-form" class="space-y-4">
+                            <input type="text" id="pet-name" placeholder="서명자 성명" class="w-full border p-3 rounded-xl text-sm bg-gray-50" required>
+                            <div class="relative border border-dashed border-gray-300 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                                <label class="block text-center cursor-pointer">
+                                    <span class="text-sm text-gray-500 block mb-1">문서 업로드</span>
+                                    <input type="file" id="pet-file" class="hidden" required accept="image/*,.pdf">
+                                </label>
+                                <div id="pet-file-name" class="text-xs text-primary text-center mt-2 hidden truncate"></div>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg">제출하기</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Donation Section -->
+    <section id="donate" class="py-32 bg-primary relative overflow-hidden text-white">
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
+            <span class="inline-block py-1 px-4 rounded-full bg-white/20 backdrop-blur text-sm font-bold mb-8 border border-white/30">Donation Campaign</span>
+            <h2 class="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight">당신의 손길이<br>가족의 내일이 됩니다</h2>
+            
+            <div class="bg-white text-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg mx-auto transform hover:-translate-y-2 transition-all duration-500">
+                <div class="mb-10">
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="text-sm text-gray-500 font-bold uppercase">Status</span>
+                        <span class="text-sm text-primary font-bold"><span id="progress-percent">0</span>% 달성</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-4 justify-center flex-wrap">
+                        <span class="text-4xl md:text-5xl font-bold text-gray-900 font-mono tracking-tight" id="current-amount-display">0</span>
+                        <span class="text-gray-400 text-lg">/ <span id="goal-amount-text">0</span>원</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-primary h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl mb-8 flex items-center justify-center gap-3 animate-pulse">
+                        <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <button onclick="window.showPaymentGuide('kakaopay')" class="bg-[#FEE500] text-[#3C1E1E] py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">카카오페이</button>
+                        <button onclick="window.showPaymentGuide('happybean')" class="bg-[#00C73C] text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">해피빈</button>
+                    </div>
+                    <div class="group relative bg-blue-50 p-5 rounded-2xl border-2 border-transparent hover:border-primary transition-all cursor-pointer text-left" id="account-info-box">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xs text-gray-500 font-medium block mb-1">계좌이체 (예금주: <span id="acc-owner"></span>)</span>
+                                <div class="font-mono font-bold text-lg md:text-xl text-gray-800 tracking-tight block group-hover:text-primary transition-colors">
+                                    <span id="acc-bank" class="mr-1"></span> <span id="acc-number"></span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-2 rounded-full shadow-sm text-gray-400"><i data-lucide="copy" class="w-5 h-5"></i></div>
+                        </div>
+                    </div>
+                     <div class="mt-6 pt-6 border-t border-gray-100">
+                        <h4 class="text-xs font-bold text-gray-400 mb-3 text-center">최근 참여하신 분들</h4>
+                        <div id="donor-ticker" class="h-8 overflow-hidden text-center relative">
+                            <div class="ticker-content space-y-1 text-sm text-gray-600 font-medium" id="donor-list-display"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-16 px-6 text-sm border-t border-gray-800">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-12">
+            <div class="space-y-4 max-w-md">
+                <h4 class="text-white font-bold text-lg flex items-center gap-2"><i data-lucide="heart-handshake" class="w-5 h-5 text-primary"></i> 교사유가족협의회</h4>
+                <div class="leading-relaxed opacity-80 space-y-1" id="footer-desc-text"></div>
+            </div>
+            <div class="flex flex-col md:items-end gap-6">
+                <button id="footer-login-trigger" class="hover:text-white transition-colors text-gray-600 text-xs flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> 관리자 로그인</button>
+                <div class="text-left md:text-right space-y-1 opacity-80">
+                    <p>문의: 010-7151-6993</p>
+                    <p>이메일: <a href="mailto:support@email.com" class="hover:text-white">support@email.com</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-modal" class="fixed inset-0 z-[9900] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm modal-backdrop" data-target="admin-modal"></div>
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 relative z-10">
+            <button class="modal-close-btn absolute top-5 right-5 text-gray-400 hover:text-gray-600" data-target="admin-modal"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <h3 class="text-xl font-bold text-gray-800 text-center mb-6">관리자 접속</h3>
+            <form id="login-form" class="space-y-4">
+                <input type="text" id="admin-id" placeholder="아이디" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" required>
+                <input type="password" id="admin-pw" placeholder="비밀번호" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" required>
+                <div id="login-error" class="text-red-500 text-xs font-bold hidden text-center bg-red-50 p-2 rounded-lg">정보가 일치하지 않습니다</div>
+                <button type="submit" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-primary-dark shadow-lg">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Container (Content injected by admin_ui.js) -->
+    <div id="admin-dashboard" class="fixed inset-0 bg-gray-50 z-[10000] hidden flex flex-col md:flex-row">
+        <aside class="w-full md:w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 h-full z-20">
+            <div class="p-5 border-b border-gray-100 flex items-center gap-3">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-md"><i data-lucide="settings" class="w-5 h-5"></i></div>
+                <span class="font-bold text-gray-800">Admin Center</span>
+            </div>
+            <nav class="p-3 space-y-1 flex-1 overflow-y-auto">
+                <button data-tab="donation" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="credit-card" class="w-4 h-4"></i> 후원 관리</button>
+                <button data-tab="budget" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="pie-chart" class="w-4 h-4"></i> 예산 관리</button>
+                <button data-tab="resources" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="folder-open" class="w-4 h-4"></i> 자료 관리</button>
+                <button data-tab="flow" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="edit" class="w-4 h-4"></i> FLOW 편집</button>
+                <button data-tab="community" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="message-circle" class="w-4 h-4"></i> 커뮤니티 승인</button>
+                <button data-tab="stats" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> 통계</button>
+                <button data-tab="settings" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="database" class="w-4 h-4"></i> 설정</button>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <button id="logout-btn" class="w-full px-4 py-2 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> 로그아웃</button>
+            </div>
+        </aside>
+        <main class="flex-1 overflow-y-auto relative bg-gray-50/50">
+            <header class="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="sliders" class="w-5 h-5"></i> <span id="admin-header-title">대시보드</span></h2>
+                <button id="preview-site" class="text-sm bg-white border border-gray-300 hover:border-gray-400 text-gray-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i> 닫기</button>
+            </header>
+            <div class="p-6 md:p-10 max-w-5xl mx-auto min-h-screen" id="admin-content-area"></div>
+        </main>
+    </div>
+</body>
+</html>
