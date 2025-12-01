@@ -87,11 +87,16 @@
             <div class="relative h-full w-auto max-w-[90%] md:max-w-3xl pointer-events-auto shadow-2xl rounded-xl overflow-hidden bg-black">
                  <button class="modal-close-btn absolute top-4 right-4 text-white/80 hover:text-white bg-black/50 rounded-full p-2 z-20" data-target="poster-modal"><i data-lucide="x" class="w-6 h-6"></i></button>
                 <img id="poster-modal-img" src="" class="h-full w-full object-contain">
+                <img id="poster-modal-qr-img" src="" class="absolute bottom-4 right-4 w-28 h-28 rounded-lg bg-white/90 p-1 shadow-xl border border-white/80">
             </div>
-            <div class="bg-white p-6 rounded-xl pointer-events-auto w-full md:w-64 flex flex-col items-center justify-center text-center shadow-xl animate-fade-in-up delay-100">
-                <h4 class="font-bold text-gray-800 mb-4">캠페인 동참하기</h4>
-                <div id="poster-modal-qr" class="bg-white p-2 border border-gray-200 rounded-lg mb-4"></div>
-                <p class="text-xs text-gray-500 mb-4">QR 코드를 스캔하여<br>후원에 참여해주세요.</p>
+            <div class="bg-white p-6 rounded-xl pointer-events-auto w-full md:w-64 flex flex-col items-center justify-center text-center shadow-xl animate-fade-in-up delay-100 gap-3">
+                <h4 class="font-bold text-gray-800">공유하기</h4>
+                <p class="text-xs text-gray-500 text-center">포스터에 삽입된 QR 링크를 공유하세요.</p>
+                <div class="flex flex-col gap-2 w-full">
+                    <button id="poster-share-btn" class="w-full bg-primary text-white font-bold py-2.5 rounded-lg hover:bg-primary-dark flex items-center justify-center gap-2"><i data-lucide="share-2" class="w-4 h-4"></i> SNS 공유</button>
+                    <div id="poster-share-links" class="flex flex-col gap-2"></div>
+                    <button id="poster-copy-btn" class="w-full border border-gray-200 text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"><i data-lucide="copy" class="w-4 h-4"></i> 링크 복사</button>
+                </div>
             </div>
         </div>
     </div>
@@ -162,7 +167,7 @@
                 </div>
                 <div class="order-1 lg:order-2 relative animate-fade-in-up delay-100">
                     <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square group bg-gray-100">
-                        <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="Sorrowful Mother" class="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
+                        <img id="hero-main-image" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="Sorrowful Mother" class="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
                         <div class="absolute bottom-8 left-8 text-white">
                             <p class="font-serif text-xl italic leading-relaxed">"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."</p>
@@ -178,7 +183,8 @@
         <div class="max-w-5xl mx-auto px-6">
             <div class="text-center mb-24">
                 <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">The Truth & Reality</h2>
-                <h3 class="text-3xl md:text-4xl font-serif font-bold text-gray-900">우리가 기억해야 할 이야기</h3>
+                <h3 id="story-title-text" class="text-3xl md:text-4xl font-serif font-bold text-gray-900">우리가 기억해야 할 이야기</h3>
+                <p id="story-desc-text" class="text-gray-500 mt-3">교사와 가족에게 일어난 사건의 흐름을 함께 확인해 주세요.</p>
                 <div class="w-16 h-1 bg-primary mx-auto mt-6 rounded-full"></div>
             </div>
             <div id="story-container" class="space-y-32"></div>
@@ -190,7 +196,7 @@
         <div class="max-w-7xl mx-auto px-6 relative z-10">
             <div class="text-center mb-16">
                 <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">Our Mission</h2>
-                <h3 class="text-3xl md:text-4xl font-serif font-bold text-gray-900">가족을 지키는 3가지 약속</h3>
+                <h3 id="mission-title-text" class="text-3xl md:text-4xl font-serif font-bold text-gray-900">가족을 지키는 3가지 약속</h3>
                 <div class="mt-4 text-gray-500 max-w-2xl mx-auto text-lg" id="mission-intro-text"></div>
             </div>
             <div class="grid md:grid-cols-3 gap-8" id="promises-grid"></div>
@@ -202,8 +208,8 @@
         <div class="max-w-7xl mx-auto px-6">
             <div class="grid lg:grid-cols-2 gap-16 items-start">
                 <div>
-                    <h3 class="text-3xl font-serif font-bold mb-6 text-gray-900">세부 후원 계획</h3>
-                    <p class="text-gray-500 mb-8 leading-relaxed">운영비는 0원이며, 전액 가족 지원에 사용됩니다.</p>
+                    <h3 id="plan-title-text" class="text-3xl font-serif font-bold mb-6 text-gray-900">세부 후원 계획</h3>
+                    <p id="plan-desc-text" class="text-gray-500 mb-8 leading-relaxed">운영비는 0원이며, 전액 가족 지원에 사용됩니다.</p>
                     <div class="space-y-4" id="plan-list"></div>
                 </div>
                 <div class="bg-white rounded-[2rem] shadow-soft p-8 md:p-12 border border-gray-100 text-center relative">
@@ -223,18 +229,18 @@
     <!-- Resources Section -->
     <section id="resources" class="py-20 bg-gray-50 border-y border-gray-200">
         <div class="max-w-7xl mx-auto px-6">
-            <h2 class="text-3xl font-serif font-bold mb-3 text-gray-900">행사 자료 패키지</h2>
-            <p class="text-gray-500 mb-10">투명한 운영을 위한 모든 자료를 확인하세요.</p>
+            <h2 id="resources-title-text" class="text-3xl font-serif font-bold mb-3 text-gray-900">행사 자료 패키지</h2>
+            <p id="resources-desc-text" class="text-gray-500 mb-10">투명한 운영을 위한 모든 자료를 확인하세요.</p>
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6" id="resources-grid"></div>
         </div>
     </section>
 
     <!-- Poster Gallery -->
-    <section class="py-20 bg-white border-b border-gray-100">
+    <section id="posters" class="py-20 bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-serif font-bold mb-3 text-gray-900">캠페인 포스터 갤러리</h2>
-                <p class="text-gray-500">이미지를 클릭하여 QR코드를 확인하세요.</p>
+                <h2 id="posters-title-text" class="text-3xl font-serif font-bold mb-3 text-gray-900">캠페인 포스터 갤러리</h2>
+                <p id="posters-desc-text" class="text-gray-500">이미지를 클릭하여 QR코드를 확인하세요.</p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8" id="poster-grid"></div>
         </div>
@@ -246,7 +252,7 @@
             <!-- Comments -->
             <div class="mb-24">
                 <h3 class="text-2xl font-bold mb-6 text-gray-900 border-b pb-4 flex justify-between items-end">
-                    <span>응원의 한마디</span><span class="text-sm font-normal text-gray-500">관리자 승인 후 노출</span>
+                    <span id="comments-title-text">응원의 한마디</span><span id="comments-note-text" class="text-sm font-normal text-gray-500">관리자 승인 후 노출</span>
                 </h3>
                 <div id="comments-list" class="space-y-4 mb-8 max-h-[400px] overflow-y-auto p-2 bg-gray-50 rounded-xl custom-scrollbar"></div>
                 <form id="comment-form" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -298,7 +304,7 @@
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
             <span class="inline-block py-1 px-4 rounded-full bg-white/20 backdrop-blur text-sm font-bold mb-8 border border-white/30">Donation Campaign</span>
-            <h2 class="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight">당신의 손길이<br>가족의 내일이 됩니다</h2>
+            <h2 id="donate-title-text" class="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight">당신의 손길이<br>가족의 내일이 됩니다</h2>
             
             <div class="bg-white text-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg mx-auto transform hover:-translate-y-2 transition-all duration-500">
                 <div class="mb-10">
@@ -373,6 +379,13 @@
                 <input type="text" id="admin-id" placeholder="아이디" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" required>
                 <input type="password" id="admin-pw" placeholder="비밀번호" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" required>
                 <div id="login-error" class="text-red-500 text-xs font-bold hidden text-center bg-red-50 p-2 rounded-lg">정보가 일치하지 않습니다</div>
+                <div class="flex justify-end -mt-2">
+                    <button type="button" id="find-pw-trigger" class="text-xs text-primary font-bold hover:underline">비밀번호 찾기</button>
+                </div>
+                <div id="find-pw-field" class="hidden space-y-1">
+                    <label for="admin-pw-recover-phone" class="text-xs text-gray-500">관리자 등록 휴대폰 번호</label>
+                    <input type="tel" id="admin-pw-recover-phone" placeholder="010-0000-0000" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none text-sm">
+                </div>
                 <button type="submit" class="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-primary-dark shadow-lg">로그인</button>
             </form>
         </div>

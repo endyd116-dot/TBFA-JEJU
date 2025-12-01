@@ -1,15 +1,25 @@
 export const Auth = {
-    login(id, pw) {
-
-        if (id === 'admin' && pw === '1234') {
+    async login(id, pw) {
+        try {
+            const res = await fetch('/.netlify/functions/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, pw })
+            });
+            if (!res.ok) return false;
+            const { token } = await res.json();
+            sessionStorage.setItem('tbfa_admin_token', token);
             sessionStorage.setItem('tbfa_admin_session', 'true');
             return true;
+        } catch (err) {
+            console.error('Login request failed', err);
+            return false;
         }
-        return false;
     },
     check() {
         const session = sessionStorage.getItem('tbfa_admin_session');
-        if (session === 'true') {
+        const token = sessionStorage.getItem('tbfa_admin_token');
+        if (session === 'true' && token) {
             document.getElementById('admin-dashboard').classList.remove('hidden');
 
 
@@ -24,6 +34,7 @@ export const Auth = {
     },
     logout() {
         sessionStorage.removeItem('tbfa_admin_session');
+        sessionStorage.removeItem('tbfa_admin_token');
         window.location.reload();
     }
 };

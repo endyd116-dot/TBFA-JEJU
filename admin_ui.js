@@ -52,45 +52,159 @@ export const AdminUI = {
         else if(tab === 'flow') this.renderFlowMgr(container, data);
         else if(tab === 'stats') this.renderStats(container, data);
         else if(tab === 'settings') this.renderSettings(container, data);
+        else if(tab === 'posters') this.renderPosterMgr(container, data);
         else if(tab === 'resources') this.renderResourcesMgr(container, data);
         else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
         
         if(window.lucide) lucide.createIcons();
     },
     renderDonationMgr(container, data) {
-        container.innerHTML = `
+        let editingIndex = null;
+
+        const renderList = () => `
             <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
-                <h3 class="font-bold mb-4">기본금 설정 (오프라인 합산)</h3>
-                <div class="flex gap-4">
-                    <input type="number" id="base-amount" value="${data.settings.baseAmount}" class="border p-2 rounded w-full">
-                    <button id="save-base" class="bg-primary text-white px-4 py-2 rounded">적용</button>
+                <h3 class="font-bold mb-4">현재 후원금액 설정</h3>
+                <div class="flex gap-4 items-center">
+                    <div class="relative w-full">
+                        <input type="text" id="base-amount" value="${formatCurrency(data.settings.baseAmount)}" class="border p-2 rounded w-full pr-10 text-right" inputmode="numeric">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">원</span>
+                    </div>
+                    <button id="save-base" class="bg-primary text-white px-4 py-2 rounded whitespace-nowrap">적용</button>
                 </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm">
                 <h3 class="font-bold mb-4">후원자 목록 (최근순)</h3>
-                <form id="add-donor-form" class="mb-4 flex gap-2">
-                    <input placeholder="이름" class="border p-2 rounded w-24" required>
-                    <input type="number" placeholder="금액" class="border p-2 rounded w-32" required>
-                    <button class="bg-green-500 text-white px-4 rounded">추가</button>
+                <form id="add-donor-form" class="mb-4 flex flex-wrap items-center gap-2 md:gap-3">
+                    <input placeholder="이름" class="border p-2 rounded text-right flex-1 min-w-[140px]" required>
+                    <input type="text" id="add-donor-amount" placeholder="금액" class="border p-2 rounded text-right flex-1 min-w-[160px]" inputmode="numeric">
+                    <button class="bg-green-500 text-white px-4 py-2 rounded whitespace-nowrap">추가</button>
                 </form>
-                <div class="max-h-96 overflow-y-auto">
-                    ${data.donations.map((d,i) => `<div class="flex justify-between border-b p-2"><span>${sanitize(d.name)} (${formatCurrency(d.amount)})</span><button onclick="window.delDonor(${i})" class="text-red-500 text-xs">삭제</button></div>`).join('')}
+                <div class="border-t pt-2 max-h-96 overflow-y-auto">
+                    ${data.donations.map((d,i) => {
+                        const ts = d.timestamp || d.date || '';
+                        const dt = ts ? new Date(ts) : null;
+                        const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                        if (editingIndex === i) {
+                            return `<div class="flex justify-between items-center border-b p-2 text-sm gap-2">
+                                <div class="flex flex-col flex-1 gap-1">
+                                    <input id="edit-donor-name-${i}" value="${sanitize(d.name)}" class="border p-2 rounded text-sm text-right">
+                                    <input id="edit-donor-amount-${i}" value="${formatCurrency(d.amount)}" class="border p-2 rounded text-sm text-right" inputmode="numeric">
+                                    <span class="text-[11px] text-gray-400">등록/수정: ${formatted || '—'}</span>
+                                </div>
+                                <div class="flex gap-1 shrink-0">
+                                    <button onclick="window.saveDonor(${i})" class="text-white text-xs bg-primary px-2 py-1 rounded">저장</button>
+                                    <button onclick="window.cancelEditDonor()" class="text-gray-600 text-xs border border-gray-300 px-2 py-1 rounded">취소</button>
+                                </div>
+                            </div>`;
+                        }
+                        return `<div class="flex justify-between items-center border-b p-2 text-sm">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-gray-800">${sanitize(d.name)} <span class="text-primary">(${formatCurrency(d.amount)})</span></span>
+                                <span class="text-[11px] text-gray-500">${formatted}</span>
+                            </div>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="window.editDonor(${i})" class="text-blue-500 text-xs border border-blue-200 px-2 py-1 rounded">수정</button>
+                                <button onclick="window.delDonor(${i})" class="text-red-500 text-xs border border-red-200 px-2 py-1 rounded">삭제</button>
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>
             </div>`;
+
+        container.innerHTML = renderList();
         
+        const baseToast = (msg) => {
+            let toast = document.getElementById('admin-toast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'admin-toast';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '12000';
+                toast.style.padding = '12px 16px';
+                toast.style.background = '#111827';
+                toast.style.color = 'white';
+                toast.style.borderRadius = '10px';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.pointerEvents = 'none';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+            }, 2000);
+        };
+
+        const formatInput = (val) => {
+            const num = Number(String(val).replace(/[^0-9]/g, '')) || 0;
+            return formatCurrency(num);
+        };
+        const parseInput = (val) => Number(String(val).replace(/[^0-9]/g, '')) || 0;
+
+        const baseInput = document.getElementById('base-amount');
+        baseInput.addEventListener('input', (e) => {
+            const caret = e.target.selectionStart;
+            const raw = e.target.value;
+            const formatted = formatInput(raw);
+            e.target.value = formatted;
+            e.target.setSelectionRange(formatted.length, formatted.length);
+        });
+
         document.getElementById('save-base').onclick = () => { 
-            data.settings.baseAmount = Number(document.getElementById('base-amount').value); 
+            data.settings.baseAmount = parseInput(document.getElementById('base-amount').value); 
             DataStore.save(data); 
-            showToast('저장됨'); 
+            window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+            baseToast('현재 후원금액이 적용되었습니다.');
         };
         document.getElementById('add-donor-form').onsubmit = (e) => {
             e.preventDefault();
             const inputs = e.target.querySelectorAll('input');
-            data.donations.unshift({ name: inputs[0].value, amount: Number(inputs[1].value), aiMsg: "감사합니다", date: new Date().toISOString().split('T')[0] });
+            const now = new Date();
+            data.donations.unshift({ 
+                name: inputs[0].value, 
+                amount: parseInput(inputs[1].value), 
+                aiMsg: "감사합니다", 
+                date: now.toISOString().split('T')[0],
+                timestamp: now.toISOString()
+            });
             DataStore.save(data);
             this.renderDashboard('donation');
         };
         window.delDonor = (i) => { data.donations.splice(i,1); DataStore.save(data); this.renderDashboard('donation'); };
+        window.editDonor = (i) => { editingIndex = i; container.innerHTML = renderList(); };
+        window.cancelEditDonor = () => { editingIndex = null; container.innerHTML = renderList(); };
+        window.saveDonor = (i) => {
+            const item = data.donations[i];
+            if(!item) return;
+            const nameEl = document.getElementById(`edit-donor-name-${i}`);
+            const amtEl = document.getElementById(`edit-donor-amount-${i}`);
+            item.name = nameEl?.value || item.name;
+            item.amount = parseInput(amtEl?.value || item.amount) || 0;
+            item.timestamp = new Date().toISOString();
+            DataStore.save(data);
+            editingIndex = null;
+            container.innerHTML = renderList();
+        };
+
+        // attach formatting for add/edit amount inputs
+        const attachAmountFormatter = (selector) => {
+            const el = container.querySelector(selector);
+            if(!el) return;
+            el.addEventListener('input', (e) => {
+                const formatted = formatInput(e.target.value);
+                e.target.value = formatted;
+                e.target.setSelectionRange(formatted.length, formatted.length);
+            });
+        };
+        attachAmountFormatter('#add-donor-amount');
+        data.donations.forEach((_, i) => attachAmountFormatter(`#edit-donor-amount-${i}`));
     },
     renderResourcesMgr(container, data) {
         container.innerHTML = `
@@ -133,28 +247,595 @@ export const AdminUI = {
         };
     },
     renderFlowMgr(container, data) {
+        const sectionsMeta = [
+            { id: 'hero', name: '타이틀' },
+            { id: 'story', name: '우리가 기억해야 할 이야기' },
+            { id: 'promises', name: '3가지 약속 (MISSION)' },
+            { id: 'plan', name: '세부 후원 계획' },
+            { id: 'resources', name: '행사 자료 패키지' },
+            { id: 'posters', name: '캠페인 포스터 갤러리' },
+            { id: 'community', name: '응원의 한마디 / 서명' },
+            { id: 'donate', name: '후원하기' }
+        ];
+        let currentOrder = (data.settings.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder : sectionsMeta.map(s=>s.id));
+        const hiddenSet = new Set(data.settings.hiddenSections || []);
+        const posters = data.posters || [];
+        const iconOptions = ['heart','scale','home','graduation-cap','shield','star','sparkles','users','hand-heart','thumbs-up','alert-triangle','clock','globe','target','briefcase','book-open','award','message-circle','check-circle','shield-check'];
+
+        const orderList = () => currentOrder.map((id, idx) => {
+            const meta = sectionsMeta.find(s=>s.id===id);
+            const title = meta ? meta.name : id;
+            return `
+                <div class="flex items-center gap-3 border rounded-lg p-3 bg-gray-50">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-gray-800">${idx+1}. ${title}</span>
+                        <label class="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
+                            <input type="checkbox" ${hiddenSet.has(id)?'checked':''} onchange="window.toggleSectionVisibility('${id}')" class="w-4 h-4"> 숨기기
+                        </label>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                        <button class="px-2 py-1 rounded border text-xs" onclick="window.moveSection(${idx}, -1)">▲</button>
+                        <button class="px-2 py-1 rounded border text-xs" onclick="window.moveSection(${idx}, 1)">▼</button>
+                    </div>
+
+                    <!-- icon picker is rendered per mission card -->
+                </div>
+            `;
+        }).join('');
+
         container.innerHTML = `
-            <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
-                <h3 class="font-bold">메인 텍스트 설정</h3>
-                <label class="block text-xs text-gray-500">헤더 제목 (HTML 허용)</label>
-                <input id="edit-hero-title" value="${sanitize(data.hero.title)}" class="w-full border p-2 rounded">
-                <label class="block text-xs text-gray-500">헤더 부제목</label>
-                <textarea id="edit-hero-sub" class="w-full border p-2 rounded h-24">${sanitize(data.hero.subtitle)}</textarea>
-                <h3 class="font-bold mt-6">푸터 정보 설정</h3>
-                <textarea id="edit-footer-desc" class="w-full border p-2 rounded h-24">${sanitize(data.settings.footerDesc)}</textarea>
-                <button id="save-flow" class="bg-primary text-white px-4 py-2 rounded mt-4 w-full font-bold">저장하기</button>
+            <div class="grid lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm space-y-3 lg:col-span-1">
+                    <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="list" class="w-5 h-5"></i> 섹션 순서 설정</h3>
+                    <p class="text-xs text-gray-500">아래 순서대로 메인 페이지에 표시됩니다.</p>
+                    <div class="space-y-2" id="section-order-list">${orderList()}</div>
+                </div>
+                <div id="flow-edit-panels" class="lg:col-span-2 space-y-4">
+                    <div id="flow-panel-hero" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="layout" class="w-4 h-4 text-primary"></i><h4 class="font-bold">타이틀 영역</h4></div>
+                        <div class="grid md:grid-cols-3 gap-3 items-center">
+                            <div class="md:col-span-2 space-y-2">
+                                <input id="edit-hero-title" value="${sanitize(data.hero.title)}" class="w-full border p-3 rounded text-lg font-bold">
+                                <textarea id="edit-hero-sub" class="w-full border p-3 rounded h-20">${sanitize(data.hero.subtitle)}</textarea>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="w-full aspect-square bg-gray-50 border rounded overflow-hidden">
+                                    <img id="flow-hero-thumb" src="${sanitize(data.hero.image || '')}" class="w-full h-full object-cover">
+                                </div>
+                                <input id="flow-hero-image" value="${sanitize(data.hero.image || '')}" class="w-full border p-2 rounded text-sm" placeholder="메인 이미지 URL" oninput="window.updateHeroThumb()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-story" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="book-open" class="w-4 h-4 text-primary"></i><h4 class="font-bold">스토리 섹션</h4></div>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div><label class="text-xs text-gray-500">스토리 섹션 제목</label><input id="flow-story-title" value="${sanitize(data.flowTexts?.storyTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div class="md:col-span-2"><label class="text-xs text-gray-500">스토리 섹션 설명</label><textarea id="flow-story-desc" class="w-full border p-2 rounded h-16">${sanitize(data.flowTexts?.storyDesc || '')}</textarea></div>
+                        </div>
+                        <div class="border-t pt-3 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h5 class="font-bold text-sm">스토리 카드</h5>
+                                <button id="add-story-block" class="px-3 py-1.5 bg-primary text-white rounded text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>추가</button>
+                            </div>
+                            <div class="space-y-3" id="flow-story-list">
+                                ${(data.storyBlocks || []).map((s,i)=>`
+                                    <div class="border rounded-lg p-3 bg-gray-50 space-y-2">
+                                        <div class="grid md:grid-cols-5 gap-2 text-sm items-center">
+                                            <div class="md:col-span-1">
+                                                <div class="w-full aspect-square bg-white border rounded overflow-hidden">
+                                                    <img id="flow-story-thumb-${i}" src="${sanitize(s.image || '')}" class="w-full h-full object-cover">
+                                                </div>
+                                                <input id="flow-story-img-${i}" value="${sanitize(s.image || '')}" class="w-full border p-2 rounded text-xs mt-2" placeholder="이미지 URL" oninput="window.updateStoryThumb(${i})">
+                                            </div>
+                                            <div class="md:col-span-4 grid md:grid-cols-2 gap-2">
+                                                <div class="md:col-span-2">
+                                                    <label class="text-[11px] text-gray-500">제목</label>
+                                                    <input id="flow-story-title-${i}" value="${sanitize(s.title)}" class="w-full border p-2 rounded">
+                                                </div>
+                                                <div class="md:col-span-2">
+                                                    <label class="text-[11px] text-gray-500">내용</label>
+                                                    <textarea id="flow-story-content-${i}" class="w-full border p-2 rounded h-24">${sanitize(s.content)}</textarea>
+                                                </div>
+                                                <div>
+                                                    <label class="text-[11px] text-gray-500">이미지 위치</label>
+                                                    <select id="flow-story-pos-${i}" class="w-full border p-2 rounded text-sm">
+                                                        <option value="right" ${s.position === 'right' ? 'selected' : ''}>이미지 오른쪽</option>
+                                                        <option value="left" ${s.position === 'left' ? 'selected' : ''}>이미지 왼쪽</option>
+                                                    </select>
+                                                </div>
+                                                <div class="flex justify-end md:col-span-2">
+                                                    <button class="text-red-500 text-xs" onclick="window.delStoryBlock(${i})">삭제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-mission" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="rocket" class="w-4 h-4 text-primary"></i><h4 class="font-bold">3가지 약속 (MISSION)</h4></div>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div><label class="text-xs text-gray-500">MISSION 제목</label><input id="flow-mission-title" value="${sanitize(data.flowTexts?.missionTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div class="md:col-span-2"><label class="text-xs text-gray-500">MISSION 설명</label><textarea id="flow-mission-desc" class="w-full border p-2 rounded h-16">${sanitize(data.flowTexts?.missionDesc || '')}</textarea></div>
+                        </div>
+                        <div class="border-t pt-3 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h5 class="font-bold text-sm">미션 카드</h5>
+                                <button id="add-mission" class="px-3 py-1.5 bg-primary text-white rounded text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>추가</button>
+                            </div>
+                            <div class="space-y-3" id="flow-mission-list">
+                                ${(data.promises || []).map((m,i)=>`
+                                    <div class="border rounded-lg p-3 bg-gray-50 space-y-2">
+                                        <div class="grid md:grid-cols-3 gap-2 text-sm items-center">
+                                            <div>
+                                                <label class="text-[11px] text-gray-500">아이콘(lucide 이름)</label>
+                                                <input id="flow-mission-icon-${i}" value="${sanitize(m.icon || '')}" class="w-full border p-2 rounded" placeholder="예: heart, scale, home">
+                                                <div class="grid grid-cols-6 gap-1 mt-1">
+                                                    ${iconOptions.map(icon=>`
+                                                        <button type="button" class="border rounded px-1 py-1 flex items-center justify-center text-xs hover:bg-gray-100" onclick="window.pickMissionIcon(${i}, '${icon}')">
+                                                            <i data-lucide="${icon}" class="w-4 h-4"></i>
+                                                        </button>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="text-[11px] text-gray-500">제목</label>
+                                                <input id="flow-mission-title-${i}" value="${sanitize(m.title)}" class="w-full border p-2 rounded">
+                                            </div>
+                                            <div>
+                                                <label class="text-[11px] text-gray-500">설명</label>
+                                                <textarea id="flow-mission-desc-${i}" class="w-full border p-2 rounded h-16">${sanitize(m.desc)}</textarea>
+                                            </div>
+                                            <div class="flex justify-end md:col-span-3">
+                                                <button class="text-red-500 text-xs" onclick="window.delMission(${i})">삭제</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-plan" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="pie-chart" class="w-4 h-4 text-primary"></i><h4 class="font-bold">세부 후원 계획</h4></div>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div><label class="text-xs text-gray-500">제목</label><input id="flow-plan-title" value="${sanitize(data.flowTexts?.planTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div><label class="text-xs text-gray-500">설명</label><input id="flow-plan-desc" value="${sanitize(data.flowTexts?.planDesc || '')}" class="w-full border p-2 rounded"></div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-assets" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="folder-open" class="w-4 h-4 text-primary"></i><h4 class="font-bold">자료 / 포스터</h4></div>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div><label class="text-xs text-gray-500">자료 제목</label><input id="flow-res-title" value="${sanitize(data.flowTexts?.resourcesTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div><label class="text-xs text-gray-500">자료 설명</label><input id="flow-res-desc" value="${sanitize(data.flowTexts?.resourcesDesc || '')}" class="w-full border p-2 rounded"></div>
+                            <div><label class="text-xs text-gray-500">포스터 제목</label><input id="flow-posters-title" value="${sanitize(data.flowTexts?.postersTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div><label class="text-xs text-gray-500">포스터 설명</label><input id="flow-posters-desc" value="${sanitize(data.flowTexts?.postersDesc || '')}" class="w-full border p-2 rounded"></div>
+                        </div>
+                        <div class="border-t pt-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <h5 class="font-bold text-sm">포스터 목록</h5>
+                                <button id="add-poster-flow" class="px-3 py-1.5 bg-primary text-white rounded text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>추가</button>
+                            </div>
+                            <div class="space-y-3" id="flow-poster-list">
+                                ${posters.map((p,i)=>`
+                                    <div class="border rounded-lg p-3 bg-gray-50 space-y-2">
+                                        <div class="grid md:grid-cols-5 gap-2 text-sm items-center">
+                                            <div class="md:col-span-1">
+                                                <div class="w-full aspect-square bg-white border rounded overflow-hidden flex items-center justify-center">
+                                                    <img id="flow-poster-thumb-${i}" src="${sanitize(p.url)}" class="w-full h-full object-cover">
+                                                </div>
+                                            </div>
+                                            <div class="md:col-span-4 grid md:grid-cols-2 gap-2">
+                                                <div><label class="text-[11px] text-gray-500">제목</label><input id="flow-poster-title-${i}" value="${sanitize(p.title)}" class="w-full border p-2 rounded"></div>
+                                                <div><label class="text-[11px] text-gray-500">이미지 URL</label><input id="flow-poster-url-${i}" value="${sanitize(p.url)}" class="w-full border p-2 rounded" oninput="window.updatePosterThumb(${i})"></div>
+                                                <div><label class="text-[11px] text-gray-500">QR 링크</label><input id="flow-poster-link-${i}" value="${sanitize(p.link || '')}" class="w-full border p-2 rounded"></div>
+                                                <div class="flex items-center gap-2">
+                                                    <img id="flow-poster-qr-${i}" src="${p.qr ? sanitize(p.qr) : ''}" class="w-12 h-12 border rounded bg-white object-contain">
+                                                    <button class="px-2 py-1 bg-gray-900 text-white rounded text-xs" onclick="window.genPosterQRFlow(${i})">QR 생성</button>
+                                                    <button class="text-red-500 text-xs ml-auto" onclick="window.delPosterFlow(${i})">삭제</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-community" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="message-circle" class="w-4 h-4 text-primary"></i><h4 class="font-bold">응원 / 서명</h4></div>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div><label class="text-xs text-gray-500">응원 제목</label><input id="flow-comments-title" value="${sanitize(data.flowTexts?.commentsTitle || '')}" class="w-full border p-2 rounded"></div>
+                            <div><label class="text-xs text-gray-500">응원 안내문</label><input id="flow-comments-note" value="${sanitize(data.flowTexts?.commentsNote || '')}" class="w-full border p-2 rounded"></div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-donate" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="gift" class="w-4 h-4 text-primary"></i><h4 class="font-bold">후원 섹션</h4></div>
+                        <input id="flow-donate-title" value="${sanitize(data.flowTexts?.donateTitle || '')}" class="w-full border p-3 rounded text-lg">
+                    </div>
+
+                    <div id="flow-panel-footer" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="layers" class="w-4 h-4 text-primary"></i><h4 class="font-bold">푸터 정보</h4></div>
+                        <textarea id="edit-footer-desc" class="w-full border p-3 rounded h-20">${sanitize(data.settings.footerDesc)}</textarea>
+                    </div>
+
+                    <button id="save-flow" class="w-full bg-primary text-white py-3 rounded-lg font-bold">저장하기</button>
+                </div>
             </div>`;
-        document.getElementById('save-flow').onclick = () => {
-            data.hero.title = document.getElementById('edit-hero-title').value;
-            data.hero.subtitle = document.getElementById('edit-hero-sub').value;
-            data.settings.footerDesc = document.getElementById('edit-footer-desc').value;
-            DataStore.save(data);
-            showToast('문구가 저장되었습니다.');
+
+        const regenerateOrderList = () => {
+            const list = document.getElementById('section-order-list');
+            if(list) list.innerHTML = orderList();
+            if(window.lucide) lucide.createIcons();
         };
+        const reorderEditPanels = () => {
+            const panelMap = {
+                hero: 'flow-panel-hero',
+                story: 'flow-panel-story',
+                promises: 'flow-panel-mission',
+                plan: 'flow-panel-plan',
+                resources: 'flow-panel-assets',
+                posters: 'flow-panel-assets',
+                community: 'flow-panel-community',
+                donate: 'flow-panel-donate'
+            };
+            const containerPanels = document.getElementById('flow-edit-panels');
+            if(!containerPanels) return;
+            const added = new Set();
+            currentOrder.forEach(id => {
+                const pid = panelMap[id];
+                if(pid && !added.has(pid)) {
+                    const el = document.getElementById(pid);
+                    if(el) {
+                        containerPanels.appendChild(el);
+                        added.add(pid);
+                    }
+                }
+            });
+            const footer = document.getElementById('flow-panel-footer');
+            if(footer) containerPanels.appendChild(footer);
+        };
+
+        const generateQRDataUrl = (text) => new Promise((resolve, reject) => {
+            try {
+                const temp = document.createElement('div');
+                temp.style.position = 'fixed';
+                temp.style.left = '-9999px';
+                document.body.appendChild(temp);
+                const qr = new QRCode(temp, { text, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.H });
+                setTimeout(() => {
+                    const canvas = temp.querySelector('canvas');
+                    if (canvas) resolve(canvas.toDataURL('image/png'));
+                    else reject(new Error('QR generation failed'));
+                    document.body.removeChild(temp);
+                }, 50);
+            } catch (err) { reject(err); }
+        });
+
+        window.moveSection = (idx, dir) => {
+            const next = idx + dir;
+            if(next < 0 || next >= currentOrder.length) return;
+            [currentOrder[idx], currentOrder[next]] = [currentOrder[next], currentOrder[idx]];
+            data.settings.sectionOrder = currentOrder;
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        window.genPosterQRFlow = async (i) => {
+            const link = document.getElementById(`flow-poster-link-${i}`).value || window.location.href;
+            try {
+                const dataUrl = await generateQRDataUrl(link);
+                const img = document.getElementById(`flow-poster-qr-${i}`);
+                if(img) img.src = dataUrl;
+                data.posters[i].qr = dataUrl;
+                data.posters[i].link = link;
+            DataStore.save(data);
+            showAdminToast('QR이 생성되었습니다.');
+        } catch (err) {
+            showAdminToast('QR 생성 실패');
+        }
+    };
+
+        window.delPosterFlow = (i) => {
+            if(confirm('삭제하시겠습니까?')) {
+                data.posters.splice(i,1);
+                DataStore.save(data);
+                this.renderFlowMgr(container, data);
+            }
+        };
+
+        const addBtn = document.getElementById('add-poster-flow');
+        if(addBtn) addBtn.onclick = () => {
+            data.posters.push({ title:'새 포스터', url:'', link: window.location.href, qr:'' });
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        const addStoryBtn = document.getElementById('add-story-block');
+        if(addStoryBtn) addStoryBtn.onclick = () => {
+            syncStoryInputs();
+            data.storyBlocks = data.storyBlocks || [];
+            data.storyBlocks.push({ title:'새 이야기', content:'내용을 입력하세요', image:'', position:'right' });
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        window.delStoryBlock = (i) => {
+            if(!data.storyBlocks) return;
+            if(confirm('삭제하시겠습니까?')) {
+                syncStoryInputs();
+                data.storyBlocks.splice(i,1);
+                DataStore.save(data);
+                this.renderFlowMgr(container, data);
+            }
+        };
+
+        const addMissionBtn = document.getElementById('add-mission');
+        if(addMissionBtn) addMissionBtn.onclick = () => {
+            syncMissionInputs();
+            data.promises = data.promises || [];
+            data.promises.push({ icon:'star', title:'새 약속', desc:'설명을 입력하세요' });
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        window.delMission = (i) => {
+            if(!data.promises) return;
+            if(confirm('삭제하시겠습니까?')) {
+                syncMissionInputs();
+                data.promises.splice(i,1);
+                DataStore.save(data);
+                this.renderFlowMgr(container, data);
+            }
+        };
+
+        window.pickMissionIcon = (i, icon) => {
+            const input = document.getElementById(`flow-mission-icon-${i}`);
+            if(input) input.value = icon;
+            if(window.lucide) lucide.createIcons();
+        };
+
+        window.toggleSectionVisibility = (id) => {
+            const hiddenArr = new Set(data.settings.hiddenSections || []);
+            if(hiddenArr.has(id)) hiddenArr.delete(id); else hiddenArr.add(id);
+            data.settings.hiddenSections = Array.from(hiddenArr);
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        const getVal = (id, fallback = '') => {
+            const el = document.getElementById(id);
+            return el && el.value !== undefined ? el.value : fallback;
+        };
+
+        document.getElementById('save-flow').onclick = () => {
+            data.settings.sectionOrder = currentOrder;
+            data.hero.title = getVal('edit-hero-title', data.hero.title);
+            data.hero.subtitle = getVal('edit-hero-sub', data.hero.subtitle);
+            data.hero.image = getVal('flow-hero-image', data.hero.image);
+            data.settings.footerDesc = getVal('edit-footer-desc', data.settings.footerDesc);
+            data.settings.hiddenSections = Array.from(new Set(data.settings.hiddenSections || []));
+            data.flowTexts = {
+                storyTitle: getVal('flow-story-title', data.flowTexts?.storyTitle || ''),
+                storyDesc: getVal('flow-story-desc', data.flowTexts?.storyDesc || ''),
+                missionTitle: getVal('flow-mission-title', data.flowTexts?.missionTitle || ''),
+                missionDesc: getVal('flow-mission-desc', data.flowTexts?.missionDesc || ''),
+                planTitle: getVal('flow-plan-title', data.flowTexts?.planTitle || ''),
+                planDesc: getVal('flow-plan-desc', data.flowTexts?.planDesc || ''),
+                resourcesTitle: getVal('flow-res-title', data.flowTexts?.resourcesTitle || ''),
+                resourcesDesc: getVal('flow-res-desc', data.flowTexts?.resourcesDesc || ''),
+                postersTitle: getVal('flow-posters-title', data.flowTexts?.postersTitle || ''),
+                postersDesc: getVal('flow-posters-desc', data.flowTexts?.postersDesc || ''),
+                commentsTitle: getVal('flow-comments-title', data.flowTexts?.commentsTitle || ''),
+                commentsNote: getVal('flow-comments-note', data.flowTexts?.commentsNote || ''),
+                donateTitle: getVal('flow-donate-title', data.flowTexts?.donateTitle || '')
+            };
+
+            data.storyBlocks = (data.storyBlocks || []).map((s, i) => ({
+                ...s,
+                title: document.getElementById(`flow-story-title-${i}`)?.value || '',
+                content: document.getElementById(`flow-story-content-${i}`)?.value || '',
+                image: document.getElementById(`flow-story-img-${i}`)?.value || '',
+                position: document.getElementById(`flow-story-pos-${i}`)?.value || 'right'
+            }));
+
+            data.promises = (data.promises || []).map((m, i) => ({
+                ...m,
+                icon: document.getElementById(`flow-mission-icon-${i}`)?.value || '',
+                title: document.getElementById(`flow-mission-title-${i}`)?.value || '',
+                desc: document.getElementById(`flow-mission-desc-${i}`)?.value || ''
+            }));
+
+            // 포스터 저장
+            data.posters = data.posters.map((p, i) => ({
+                ...p,
+                title: document.getElementById(`flow-poster-title-${i}`)?.value || '',
+                url: document.getElementById(`flow-poster-url-${i}`)?.value || '',
+                link: document.getElementById(`flow-poster-link-${i}`)?.value || window.location.href,
+                qr: document.getElementById(`flow-poster-qr-${i}`)?.src || ''
+            }));
+
+            DataStore.save(data);
+            showAdminToast('섹션 순서/문구/포스터/스토리가 저장되었습니다.');
+            window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+        };
+
+        regenerateOrderList();
+        reorderEditPanels();
+        window.updatePosterThumb = (i) => {
+            const url = document.getElementById(`flow-poster-url-${i}`)?.value || '';
+            const img = document.getElementById(`flow-poster-thumb-${i}`);
+            if(img) img.src = url;
+        };
+        window.updateHeroThumb = () => {
+            const url = document.getElementById('flow-hero-image')?.value || '';
+            const img = document.getElementById('flow-hero-thumb');
+            if(img) img.src = url;
+        };
+        window.updateStoryThumb = (i) => {
+            const url = document.getElementById(`flow-story-img-${i}`)?.value || '';
+            const img = document.getElementById(`flow-story-thumb-${i}`);
+            if(img) img.src = url;
+        };
+
+        const syncStoryInputs = () => {
+            if(!data.storyBlocks) return;
+            data.storyBlocks = data.storyBlocks.map((s, i) => ({
+                ...s,
+                title: document.getElementById(`flow-story-title-${i}`)?.value || s.title,
+                content: document.getElementById(`flow-story-content-${i}`)?.value || s.content,
+                image: document.getElementById(`flow-story-img-${i}`)?.value || s.image,
+                position: document.getElementById(`flow-story-pos-${i}`)?.value || s.position || 'right'
+            }));
+        };
+
+        const syncMissionInputs = () => {
+            if(!data.promises) return;
+            data.promises = data.promises.map((m, i) => ({
+                ...m,
+                icon: document.getElementById(`flow-mission-icon-${i}`)?.value || m.icon,
+                title: document.getElementById(`flow-mission-title-${i}`)?.value || m.title,
+                desc: document.getElementById(`flow-mission-desc-${i}`)?.value || m.desc
+            }));
+        };
+
+        function showAdminToast(msg) {
+            let toast = document.getElementById('admin-toast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'admin-toast';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '12000';
+                toast.style.padding = '12px 16px';
+                toast.style.background = '#111827';
+                toast.style.color = 'white';
+                toast.style.borderRadius = '10px';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.pointerEvents = 'none'; // 클릭 막지 않도록
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+            }, 2000);
+        }
     },
     renderBudgetMgr(container, data) {
         container.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-sm flex gap-8"><div class="w-1/3 h-64"><canvas id="adminBudgetChart"></canvas></div><div class="w-2/3" id="budget-items"></div></div>`;
         new Chart(document.getElementById('adminBudgetChart'), { type: 'pie', data: { labels: data.budget.map(b=>b.label), datasets: [{ data: data.budget.map(b=>b.value), backgroundColor: data.budget.map(b=>b.color) }] } });
+    },
+    renderPosterMgr(container, data) {
+        const posters = data.posters || [];
+        container.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> 포스터 관리</h3>
+                <button id="add-poster" class="bg-primary text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> 추가</button>
+            </div>
+            <div class="space-y-4">
+                ${posters.map((p,i)=>`
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                        <div class="flex gap-3">
+                            <div class="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border">
+                                <img src="${sanitize(p.url)}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-500">제목</label>
+                                    <input id="poster-title-${i}" value="${sanitize(p.title)}" class="w-full border p-2 rounded text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">포스터 이미지 URL</label>
+                                    <input id="poster-url-${i}" value="${sanitize(p.url)}" class="w-full border p-2 rounded text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">QR 연결 링크</label>
+                                    <input id="poster-link-${i}" value="${sanitize(p.link || '')}" placeholder="https://..." class="w-full border p-2 rounded text-sm">
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-xs text-gray-500">QR 미리보기</label>
+                                    <div class="flex items-center gap-2">
+                                        <img id="poster-qr-preview-${i}" src="${p.qr ? sanitize(p.qr) : ''}" class="w-16 h-16 border rounded bg-white object-contain">
+                                        <button class="px-3 py-2 text-xs bg-gray-900 text-white rounded" onclick="window.genPosterQR(${i})">QR 생성</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button class="text-red-500 text-sm" onclick="window.delPoster(${i})">삭제</button>
+                            <button class="bg-primary text-white px-4 py-2 rounded text-sm" onclick="window.savePoster(${i})">저장</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        const generateQRDataUrl = (text) => new Promise((resolve, reject) => {
+            try {
+                const temp = document.createElement('div');
+                temp.style.position = 'fixed';
+                temp.style.left = '-9999px';
+                document.body.appendChild(temp);
+                const qr = new QRCode(temp, { text, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.H });
+                setTimeout(() => {
+                    const canvas = temp.querySelector('canvas');
+                    if (canvas) resolve(canvas.toDataURL('image/png'));
+                    else reject(new Error('QR generation failed'));
+                    document.body.removeChild(temp);
+                }, 50);
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        window.genPosterQR = async (i) => {
+            const link = document.getElementById(`poster-link-${i}`).value || window.location.href;
+            try {
+                const dataUrl = await generateQRDataUrl(link);
+                document.getElementById(`poster-qr-preview-${i}`).src = dataUrl;
+                data.posters[i].qr = dataUrl;
+                data.posters[i].link = link;
+                DataStore.save(data);
+                showToast('QR이 생성되었습니다.');
+            } catch (err) {
+                showToast('QR 생성 실패');
+            }
+        };
+
+        window.savePoster = (i) => {
+            data.posters[i].title = document.getElementById(`poster-title-${i}`).value;
+            data.posters[i].url = document.getElementById(`poster-url-${i}`).value;
+            data.posters[i].link = document.getElementById(`poster-link-${i}`).value || window.location.href;
+            data.posters[i].qr = document.getElementById(`poster-qr-preview-${i}`).src || '';
+            DataStore.save(data);
+            showToast('포스터가 저장되었습니다.');
+        };
+
+        window.delPoster = (i) => {
+            if(confirm('삭제하시겠습니까?')) {
+                data.posters.splice(i,1);
+                DataStore.save(data);
+                this.renderPosterMgr(container, data);
+            }
+        };
+
+        document.getElementById('add-poster').onclick = () => {
+            data.posters.push({ title: '새 포스터', url: '', link: window.location.href, qr: '' });
+            DataStore.save(data);
+            this.renderPosterMgr(container, data);
+        };
     },
     renderCommunityMgr(container, data) {
         container.innerHTML = `

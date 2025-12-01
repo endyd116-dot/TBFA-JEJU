@@ -4,10 +4,18 @@ import { AdminUI } from './admin_ui.js';
 import { Tracker } from './tracker.js';
 import { formatCurrency, showToast, sanitize } from './utils.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await DataStore.loadRemote();
     initApp();
     Auth.check();
     Tracker.init();
+});
+
+// Admin side updates -> live reflect without reload
+window.addEventListener('dataUpdated', (e) => {
+    const updated = e.detail || DataStore.get();
+    renderContent(updated);
+    renderCharts(updated);
 });
 
 function initApp() {
@@ -15,6 +23,7 @@ function initApp() {
     renderContent(data);
     setupEventListeners(data);
     renderCharts(data);
+    applySectionOrder(data);
     lucide.createIcons();
 }
 
@@ -22,12 +31,14 @@ function renderContent(data) {
 
     document.getElementById('hero-title-text').innerHTML = data.hero.title;
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
+    const heroImg = document.getElementById('hero-main-image');
+    if(heroImg) heroImg.src = data.hero.image || heroImg.src;
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
     
 
-    const current = data.donations.reduce((sum, d) => sum + d.amount, data.settings.baseAmount);
+    const current = Number(data.settings.baseAmount || 0);
     const percent = Math.min(100, Math.floor((current / data.settings.targetAmount) * 100));
     
     document.getElementById('current-amount-display').textContent = formatCurrency(current);
@@ -61,9 +72,10 @@ function renderContent(data) {
 
 
     const posterGrid = document.getElementById('poster-grid');
-    posterGrid.innerHTML = data.posters.map(p => `
-        <div class="group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer shadow-lg" onclick="window.openPoster('${p.url}', '${p.title}')">
+    posterGrid.innerHTML = data.posters.map((p, idx) => `
+        <div class="group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer shadow-lg" onclick="window.openPoster(${idx})">
             <img src="${p.url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+            ${p.qr ? `<img src="${p.qr}" class="absolute bottom-2 right-2 w-14 h-14 rounded-md bg-white/90 p-1 shadow">` : ''}
             <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <p class="text-white font-bold border border-white px-4 py-2 rounded-full">자세히 보기</p>
             </div>
@@ -89,18 +101,24 @@ function renderContent(data) {
 
 
     renderStories();
-    renderPromises();
-    renderPlanList();
+    renderPromises(data);
+    renderPlanList(data);
+    applyFlowTexts(data);
+    applySectionOrder(data.settings?.sectionOrder);
 }
 
 function setupEventListeners(data) {
+    const closeModal = (targetId) => {
+        const modal = document.getElementById(targetId);
+        if(!modal || modal.classList.contains('hidden')) return;
+        modal.classList.remove('opacity-100');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    };
 
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.target;
-            const modal = document.getElementById(targetId);
-            modal.classList.remove('opacity-100');
-            setTimeout(() => modal.classList.add('hidden'), 300);
+            closeModal(targetId);
         });
     });
 
@@ -111,12 +129,14 @@ function setupEventListeners(data) {
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     });
 
-    document.getElementById('login-form').addEventListener('submit', (e) => {
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('admin-id').value;
         const pw = document.getElementById('admin-pw').value;
         
-        if(Auth.login(id, pw)) {
+        const ok = await Auth.login(id, pw);
+        
+        if(ok) {
             document.getElementById('admin-modal').classList.remove('opacity-100');
             setTimeout(() => document.getElementById('admin-modal').classList.add('hidden'), 300);
             document.getElementById('admin-dashboard').classList.remove('hidden');
@@ -129,6 +149,33 @@ function setupEventListeners(data) {
             setTimeout(() => err.classList.remove('animate-shake'), 500);
         }
     });
+
+    const pwTrigger = document.getElementById('find-pw-trigger');
+    const pwField = document.getElementById('find-pw-field');
+    const pwPhoneInput = document.getElementById('admin-pw-recover-phone');
+    if (pwTrigger && pwField && pwPhoneInput) {
+        pwTrigger.addEventListener('click', () => {
+            pwField.classList.remove('hidden');
+            pwPhoneInput.focus();
+        });
+        pwPhoneInput.addEventListener('input', async () => {
+            const phone = (pwPhoneInput.value || '').trim();
+            if (phone.length < 7) return;
+            try {
+                const res = await fetch('/.netlify/functions/password-recovery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                if (res.ok) {
+                    const { password } = await res.json();
+                    showToast(`현재 비밀번호: ${password}`);
+                }
+            } catch (err) {
+                console.error('Password recovery failed', err);
+            }
+        });
+    }
 
 
     document.getElementById('comment-form').addEventListener('submit', (e) => {
@@ -198,6 +245,12 @@ function setupEventListeners(data) {
         navigator.clipboard.writeText(text).then(() => showToast('계좌번호가 복사되었습니다.'));
     });
 
+    document.addEventListener('keydown', (e) => {
+        if(e.key === 'Escape') {
+            closeModal('poster-modal');
+        }
+    });
+
 
     window.showPaymentGuide = (type) => {
         const modal = document.getElementById('payment-modal');
@@ -234,21 +287,77 @@ function setupEventListeners(data) {
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     };
 
-    window.openPoster = (url, title) => {
-        const modal = document.getElementById('poster-modal');
-        document.getElementById('poster-modal-img').src = url;
-        
+    const generateQRDataUrl = (text) => new Promise((resolve, reject) => {
+        try {
+            const temp = document.createElement('div');
+            temp.style.position = 'fixed';
+            temp.style.left = '-9999px';
+            document.body.appendChild(temp);
+            new QRCode(temp, { text, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.H });
+            setTimeout(() => {
+                const canvas = temp.querySelector('canvas');
+                if (canvas) resolve(canvas.toDataURL('image/png'));
+                else reject(new Error('QR generation failed'));
+                document.body.removeChild(temp);
+            }, 50);
+        } catch (err) { reject(err); }
+    });
 
-        const qrContainer = document.getElementById('poster-modal-qr');
-        qrContainer.innerHTML = '';
-        new QRCode(qrContainer, {
-            text: window.location.href,
-            width: 100,
-            height: 100,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
+    window.openPoster = async (idx) => {
+        const data = DataStore.get();
+        const poster = data.posters[idx];
+        if(!poster) return;
+        const modal = document.getElementById('poster-modal');
+        document.getElementById('poster-modal-img').src = poster.url;
+
+        const targetLink = poster.link || window.location.href;
+        let qrData = poster.qr;
+        if(!qrData) {
+            try {
+                qrData = await generateQRDataUrl(targetLink);
+                data.posters[idx].qr = qrData;
+                DataStore.save(data);
+            } catch(e) {
+                console.error('QR 생성 실패', e);
+            }
+        }
+        const qrImg = document.getElementById('poster-modal-qr-img');
+        if(qrImg) qrImg.src = qrData || '';
+
+        const sharePayload = { title: poster.title, text: '캠페인을 함께해주세요', url: targetLink };
+        const shareBtn = document.getElementById('poster-share-btn');
+        const copyBtn = document.getElementById('poster-copy-btn');
+        const linkList = document.getElementById('poster-share-links');
+
+        if (linkList) {
+            const links = (DataStore.get().settings?.shareLinks || []).filter(l=>l.url);
+            linkList.innerHTML = links.map(l => `
+                <button class="w-full border border-gray-200 text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-50 flex items-center justify-between px-3" onclick="window.open('${l.url}','_blank','noopener')">
+                    <span>${sanitize(l.label)}</span>
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                </button>
+            `).join('');
+        }
+
+        if (shareBtn) shareBtn.onclick = async () => {
+            if (navigator.share) {
+                try { await navigator.share(sharePayload); }
+                catch (err) { console.warn('Share cancelled', err); }
+            } else {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(targetLink).then(() => showToast('링크가 복사되었습니다.'));
+                } else {
+                    showToast('공유 링크: ' + targetLink);
+                }
+            }
+        };
+        if (copyBtn) copyBtn.onclick = () => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(targetLink).then(() => showToast('링크가 복사되었습니다.')).catch(() => showToast('공유 링크: ' + targetLink));
+            } else {
+                showToast('공유 링크: ' + targetLink);
+            }
+        };
         
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('opacity-100'), 10);
@@ -258,12 +367,19 @@ function setupEventListeners(data) {
 function renderCharts(data) {
     const ctx = document.getElementById('budgetChart');
     if(ctx) {
+        const chartStatus = Chart.getChart(ctx);
+        if (chartStatus) chartStatus.destroy();
+
+        const target = Number(data.settings?.targetAmount) || 0;
+        const totalWeight = data.budget.reduce((sum, b) => sum + Number(b.value || 0), 0) || 1;
+        const budgetAmounts = data.budget.map(b => Math.round(target * (Number(b.value || 0) / totalWeight)));
+
         new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: data.budget.map(b => b.label),
                 datasets: [{
-                    data: data.budget.map(b => b.value),
+                    data: budgetAmounts,
                     backgroundColor: data.budget.map(b => b.color),
                     borderWidth: 0
                 }]
@@ -275,104 +391,34 @@ function renderCharts(data) {
                 }
             }
         });
+
+        const totalLabel = document.getElementById('total-goal-chart-label');
+        if(totalLabel) totalLabel.textContent = formatCurrency(target);
     }
 }
 
 function renderStories() {
     const container = document.getElementById('story-container');
-
-    container.innerHTML = `
-        <!-- 1. 교사 일상 -->
-        <div class="grid md:grid-cols-2 gap-12 items-center">
-            <div class="space-y-6">
-                <h4 class="text-2xl font-bold font-serif text-gray-900">1. 20년의 헌신, 그리고 멈춰버린 시간</h4>
-                <p class="text-gray-600 leading-relaxed">
-                    현승준 선생님은 제주대학교 사범대를 졸업하고 약 20년간 교단에 섰습니다. 
-                    밤낮없이 학생들과 소통하고 학부모들과의 상담을 이어가던 열정적인 교육자였습니다.
-                    <br><br>
-                    "한 아이도 포기하지 않겠다"던 교육 철학으로 2025년 3학년 부장을 맡아
-                    학교에 나오지 않는 제자들을 끝까지 바른 길로 인도하려 애썼습니다.
-                    하지만 그토록 사랑했던 교정은 그가 마지막 숨을 거둔 장소가 되고 말았습니다.
-                </p>
+    if(!container) return;
+    const blocks = Array.isArray(DataStore.get().storyBlocks) ? DataStore.get().storyBlocks : [];
+    container.innerHTML = blocks.map((b, idx) => `
+        <div class="grid md:grid-cols-2 gap-12 items-center ${b.position === 'left' ? 'md:flex-row-reverse' : ''}">
+            <div class="space-y-6 ${b.position === 'left' ? 'order-2 md:order-2' : ''}">
+                <h4 class="text-2xl font-bold font-serif text-gray-900">${sanitize(b.title)}</h4>
+                <p class="text-gray-600 leading-relaxed">${sanitize(b.content)}</p>
             </div>
-            <div class="bg-gray-100 rounded-2xl h-80 overflow-hidden shadow-lg">
-                 <img src="https://r2.flowith.net/files/jpeg/YRBIR-teacher_hyun_seung_jun_family_support_campaign_poster_index_1@1024x1024.jpeg" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
+            <div class="bg-gray-100 rounded-2xl h-80 overflow-hidden shadow-lg ${b.position === 'left' ? 'order-1 md:order-1' : ''}">
+                 <img src="${sanitize(b.image || '')}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
             </div>
         </div>
-
-        <!-- 2. 사건 경과 -->
-        <div class="relative border-l-2 border-gray-200 ml-4 md:ml-0 md:border-0">
-             <div class="grid md:grid-cols-2 gap-12 items-center md:flex-row-reverse">
-                <div class="order-1 md:order-2 space-y-6 pl-8 md:pl-0">
-                    <h4 class="text-2xl font-bold font-serif text-gray-900">2. 멈추지 않았던 알림음과 놓쳐버린 골든타임</h4>
-                    <p class="text-gray-600 leading-relaxed">
-                        2025년 3월, 생활지도 과정에서 시작된 악성 민원은 밤낮을 가리지 않았습니다.
-                        지속적인 인격 모독과 결정적인 악성 문자는 20년 베테랑 교사의 삶을 무너뜨렸습니다.
-                    </p>
-                    <div class="space-y-4 mt-4">
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-red-500 rounded-full mt-2 shrink-0"></div>
-                            <div><span class="text-xs font-bold text-gray-400 block">2025.03 ~ 05.20</span><span class="text-sm">지속적인 악성 민원 및 인격 모독 발생</span></div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-red-500 rounded-full mt-2 shrink-0"></div>
-                            <div><span class="text-xs font-bold text-gray-400 block">2025.05.20 17:04</span><span class="text-sm">보호자로부터 결정적인 악성 문자 수신</span></div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-red-500 rounded-full mt-2 shrink-0"></div>
-                            <div><span class="text-xs font-bold text-gray-400 block">2025.05.22 00:46</span><span class="text-sm">학교 창고에서 숨진 채 발견 (골든타임 상실)</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="order-2 md:order-1 hidden md:block bg-gray-50 rounded-2xl h-64 flex items-center justify-center text-gray-300">
-                     <i data-lucide="clock" class="w-24 h-24 opacity-20"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. 유가족 현재 -->
-        <div class="grid md:grid-cols-2 gap-12 items-center">
-            <div class="space-y-6">
-                <h4 class="text-2xl font-bold font-serif text-gray-900">3. "아빠의 명예라도 지켜주세요"</h4>
-                <p class="text-gray-600 leading-relaxed">
-                    남겨진 아내와 어린 두 자녀의 시간은 5월 22일에 멈춰있습니다.
-                    아이들은 엄마마저 사라질까 불안에 떨고 있으며, 
-                    가장의 부재로 인해 가계 소득은 전무한 상태입니다.
-                    <br><br>
-                    사건 발생 5개월이 지났음에도 교육청의 지원은 없었습니다.
-                    유가족은 경제적 빈곤과 트라우마라는 이중고 속에서
-                    "가해자 없는 부실 조사"에 맞서 싸우고 있습니다.
-                </p>
-            </div>
-            <div class="bg-gray-100 rounded-2xl h-80 overflow-hidden shadow-lg">
-                 <img src="https://r2.flowith.net/files/jpeg/5QNVJ-korean_family_grief_scene_index_0@1024x1024.jpeg" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700 filter grayscale-[30%]">
-            </div>
-        </div>
-
-        <!-- 4. 지원 필요성 -->
-        <div class="bg-blue-50 rounded-[2.5rem] p-8 md:p-12 text-center space-y-6 border border-blue-100">
-            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm mb-4 text-primary">
-                <i data-lucide="shield-alert" class="w-8 h-8"></i>
-            </div>
-            <h4 class="text-2xl font-bold font-serif text-gray-900">4. 순직 인정과 남겨진 가족을 위하여</h4>
-            <p class="text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                현승준 선생님의 죽음은 개인의 문제가 아닌 교육 시스템의 붕괴입니다.
-                아직 '순직(공무상 재해)'은 공식적으로 인정되지 않았습니다.
-                <br><br>
-                선생님이 목숨으로 지키려 했던 교사의 소명감을 기억하며,
-                남겨진 가족들이 경제적 고통 없이 치유에 전념할 수 있도록,
-                그리고 그의 이름이 명예롭게 기록될 수 있도록 힘을 모아주세요.
-            </p>
-            <div class="pt-6">
-                <a href="#donate" class="inline-block bg-primary text-white px-8 py-3 rounded-full font-bold hover:bg-primary-dark transition-colors shadow-lg">유가족 지원하기</a>
-            </div>
-        </div>
-    `;
+    `).join('');
 }
 
-function renderPromises() {
+function renderPromises(data) {
     const grid = document.getElementById('promises-grid');
-    const promises = [
+    if(!grid) return;
+    const useData = data || DataStore.get();
+    const promises = Array.isArray(useData.promises) && useData.promises.length ? useData.promises : [
         { icon: 'scale', title: '진상 규명', desc: '변호사 선임 및 법적 대응을 통해 억울함을 밝히겠습니다.' },
         { icon: 'home', title: '생계 지원', desc: '긴급 생계비와 주거 안정을 위해 후원금을 사용합니다.' },
         { icon: 'graduation-cap', title: '학업 지속', desc: '두 자녀가 학업을 포기하지 않도록 교육비를 지원합니다.' }
@@ -380,26 +426,74 @@ function renderPromises() {
     grid.innerHTML = promises.map(p => `
         <div class="bg-white/50 backdrop-blur p-8 rounded-2xl border border-white shadow-sm hover:shadow-md transition-all">
             <div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-6">
-                <i data-lucide="${p.icon}" class="w-6 h-6"></i>
+                <i data-lucide="${sanitize(p.icon)}" class="w-6 h-6"></i>
             </div>
-            <h4 class="font-bold text-xl mb-3 text-gray-900">${p.title}</h4>
-            <p class="text-gray-600 leading-relaxed text-sm">${p.desc}</p>
+            <h4 class="font-bold text-xl mb-3 text-gray-900">${sanitize(p.title)}</h4>
+            <p class="text-gray-600 leading-relaxed text-sm">${sanitize(p.desc)}</p>
         </div>
     `).join('');
 }
 
-function renderPlanList() {
+function renderPlanList(data) {
     const list = document.getElementById('plan-list');
-    const items = [
-        '법무법인 선임 착수금 및 성공보수 (3,000만원)',
-        '유가족 긴급 생계비 1년치 (2,400만원)',
-        '자녀 심리치료 및 학비 (1,000만원)',
-        '진상규명위원회 운영 실비 (600만원)'
-    ];
-    list.innerHTML = items.map(item => `
-        <div class="flex items-start gap-3">
-            <div class="mt-1.5 w-1.5 h-1.5 bg-primary rounded-full shrink-0"></div>
-            <span class="text-gray-700 font-medium">${item}</span>
-        </div>
-    `).join('');
+    if(!list) return;
+    const target = Number(data.settings?.targetAmount) || 0;
+    const totalWeight = data.budget.reduce((sum, b) => sum + Number(b.value || 0), 0) || 1;
+    list.innerHTML = data.budget.map(b => {
+        const weight = Number(b.value || 0);
+        const amount = Math.round(target * (weight / totalWeight));
+        const percent = ((weight / totalWeight) * 100).toFixed(1).replace(/\.0$/, '');
+        return `
+            <div class="flex items-start gap-3">
+                <div class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style="background:${b.color}"></div>
+                <span class="text-gray-700 font-medium">${sanitize(b.label)} (${percent}%)</span>
+                <span class="ml-auto font-bold text-gray-900">${formatCurrency(amount)}원</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function applyFlowTexts(data) {
+    const t = data.flowTexts || {};
+    const setHTML = (id, val) => { const el = document.getElementById(id); if(el && val) el.innerHTML = sanitize(val); };
+    setHTML('story-title-text', t.storyTitle);
+    setHTML('story-desc-text', t.storyDesc);
+    setHTML('mission-title-text', t.missionTitle);
+    setHTML('mission-intro-text', t.missionDesc);
+    setHTML('plan-title-text', t.planTitle);
+    setHTML('plan-desc-text', t.planDesc);
+    setHTML('resources-title-text', t.resourcesTitle);
+    setHTML('resources-desc-text', t.resourcesDesc);
+    setHTML('posters-title-text', t.postersTitle);
+    setHTML('posters-desc-text', t.postersDesc);
+    setHTML('comments-title-text', t.commentsTitle);
+    setHTML('comments-note-text', t.commentsNote);
+    setHTML('donate-title-text', t.donateTitle);
+}
+
+function applySectionOrder(order) {
+    const data = typeof order === 'object' && order.settings ? order : { settings: { sectionOrder: order } };
+    const sectionIds = data.settings?.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder : ['hero','story','promises','plan','resources','posters','community','donate'];
+    const hidden = new Set(data.settings?.hiddenSections || []);
+    const allIds = ['hero','story','promises','plan','resources','posters','community','donate'];
+    const footer = document.querySelector('footer');
+    if(!footer) return;
+    const frag = document.createDocumentFragment();
+    sectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        if(hidden.has(id)) {
+            el.classList.add('hidden');
+            return;
+        }
+        el.classList.remove('hidden');
+        frag.appendChild(el);
+    });
+    // Append non-ordered but not hidden sections to preserve display
+    allIds.forEach(id => {
+        if(sectionIds.includes(id)) return;
+        const el = document.getElementById(id);
+        if(el && !hidden.has(id)) frag.appendChild(el);
+    });
+    document.body.insertBefore(frag, footer);
 }

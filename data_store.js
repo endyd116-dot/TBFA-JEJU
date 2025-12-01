@@ -6,8 +6,34 @@ export const DataStore = {
         }
         return this.init();
     },
+    async loadRemote() {
+        try {
+            const res = await fetch('/.netlify/functions/data');
+            if (!res.ok) throw new Error('remote fetch failed');
+            const remote = await res.json();
+            if (remote && Object.keys(remote).length) {
+                localStorage.setItem('tbfa_data', JSON.stringify(remote));
+                return remote;
+            }
+        } catch (err) {
+            console.warn('Remote load failed, using local/default', err);
+        }
+        return this.get();
+    },
     save(data) {
         localStorage.setItem('tbfa_data', JSON.stringify(data));
+        // try to persist remotely if admin token present
+        const token = sessionStorage.getItem('tbfa_admin_token') || '';
+        if (token) {
+            fetch('/.netlify/functions/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            }).catch(err => console.warn('Remote save failed', err));
+        }
     },
     reset() {
         localStorage.removeItem('tbfa_data');
@@ -17,20 +43,67 @@ export const DataStore = {
         const defaultData = {
             hero: {
                 title: "선생님의 명예 회복과<br>남겨진 가족을 위해",
-                subtitle: "제주중학교 사건 故 현승준 선생님의 억울함을 알리고<br>유가족의 생계와 치유를 지원합니다."
+                subtitle: "제주중학교 사건 故 현승준 선생님의 억울함을 알리고<br>유가족의 생계와 치유를 지원합니다.",
+                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop"
             },
+            storyBlocks: [
+                {
+                    title: "20년의 헌신, 그리고 멈춰버린 시간",
+                    content: `현승준 선생님은 제주대학교 사범대를 졸업하고 약 20년간 교단에 섰습니다. 밤낮없이 학생들과 소통하고 학부모들과의 상담을 이어가던 열정적인 교육자였습니다.<br><br>"한 아이도 포기하지 않겠다"던 교육 철학으로 2025년 3학년 부장을 맡아 학교에 나오지 않는 제자들을 끝까지 바른 길로 인도하려 애썼습니다. 하지만 그토록 사랑했던 교정은 그가 마지막 숨을 거둔 장소가 되고 말았습니다.`,
+                    image: "https://r2.flowith.net/files/jpeg/YRBIR-teacher_hyun_seung_jun_family_support_campaign_poster_index_1@1024x1024.jpeg",
+                    position: "right"
+                },
+                {
+                    title: "멈추지 않았던 알림음과 놓쳐버린 골든타임",
+                    content: `2025년 3월, 생활지도 과정에서 시작된 악성 민원은 밤낮을 가리지 않았습니다. 지속적인 인격 모독과 결정적인 악성 문자는 20년 베테랑 교사의 삶을 무너뜨렸습니다.<br><br>2025.05.20 17:04 보호자로부터 결정적인 악성 문자 수신<br>2025.05.22 00:46 학교 창고에서 숨진 채 발견 (골든타임 상실)`,
+                    image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1000&auto=format&fit=crop",
+                    position: "left"
+                },
+                {
+                    title: `"아빠의 명예라도 지켜주세요"`,
+                    content: `남겨진 아내와 어린 두 자녀의 시간은 5월 22일에 멈춰있습니다. 아이들은 엄마마저 사라질까 불안에 떨고 있으며, 가장의 부재로 인해 가계 소득은 전무한 상태입니다.<br><br>사건 발생 5개월이 지났음에도 교육청의 지원은 없었습니다. 유가족은 경제적 빈곤과 트라우마라는 이중고 속에서 "가해자 없는 부실 조사"에 맞서 싸우고 있습니다.`,
+                    image: "https://r2.flowith.net/files/jpeg/5QNVJ-korean_family_grief_scene_index_0@1024x1024.jpeg",
+                    position: "right"
+                }
+            ],
+            promises: [
+                { icon: 'scale', title: '진상 규명', desc: '변호사 선임 및 법적 대응을 통해 억울함을 밝히겠습니다.' },
+                { icon: 'home', title: '생계 지원', desc: '긴급 생계비와 주거 안정을 위해 후원금을 사용합니다.' },
+                { icon: 'graduation-cap', title: '학업 지속', desc: '두 자녀가 학업을 포기하지 않도록 교육비를 지원합니다.' }
+            ],
             settings: {
                 targetAmount: 200000000,
                 baseAmount: 12500000,
                 footerDesc: "본 캠페인은 교사유가족협의회에서 운영하며,<br>모금된 후원금은 전액 유가족에게 전달됩니다.",
                 accountOwner: "유가족대표",
                 accountBank: "농협",
-                accountNumber: "351-1234-5678-90"
+                accountNumber: "351-1234-5678-90",
+                sectionOrder: ['hero','story','promises','plan','resources','posters','community','donate'],
+                hiddenSections: [],
+                shareLinks: [
+                    { label: "카카오톡 채널", url: "https://pf.kakao.com" },
+                    { label: "네이버 블로그", url: "https://blog.naver.com" }
+                ]
+            },
+            flowTexts: {
+                storyTitle: "우리가 기억해야 할 이야기",
+                storyDesc: "교사와 가족에게 일어난 사건의 흐름을 함께 확인해 주세요.",
+                missionTitle: "가족을 지키는 3가지 약속",
+                missionDesc: "함께 모은 정성과 후원금이 유가족의 생계와 명예회복에 직접 쓰입니다.",
+                planTitle: "세부 후원 계획",
+                planDesc: "운영비는 0원이며, 전액 가족 지원에 사용됩니다.",
+                resourcesTitle: "행사 자료 패키지",
+                resourcesDesc: "투명한 운영을 위한 모든 자료를 확인하세요.",
+                postersTitle: "캠페인 포스터 갤러리",
+                postersDesc: "이미지를 클릭하여 QR과 함께 공유하세요.",
+                commentsTitle: "응원의 한마디",
+                commentsNote: "관리자 승인 후 노출",
+                donateTitle: "당신의 손길이<br>가족의 내일이 됩니다"
             },
             donations: [
-                { name: "김철수", amount: 50000, aiMsg: "힘내세요", date: "2025-11-28" },
-                { name: "익명", amount: 100000, aiMsg: "응원합니다", date: "2025-11-27" },
-                { name: "박영희", amount: 30000, aiMsg: "정의가 승리하길", date: "2025-11-26" }
+                { name: "김철수", amount: 50000, aiMsg: "힘내세요", date: "2025-11-28", timestamp: "2025-11-28T12:00:00Z" },
+                { name: "익명", amount: 100000, aiMsg: "응원합니다", date: "2025-11-27", timestamp: "2025-11-27T12:00:00Z" },
+                { name: "박영희", amount: 30000, aiMsg: "정의가 승리하길", date: "2025-11-26", timestamp: "2025-11-26T12:00:00Z" }
             ],
             budget: [
                 { label: "생활 안정", value: 40, color: "#FF6384" },
@@ -208,10 +281,10 @@ export const DataStore = {
                 }
             ],
             posters: [
-                { title: "거리 캠페인용", url: "https://images.unsplash.com/photo-1599059813005-11265ba4b4ce?auto=format&fit=crop&q=80&w=1000" },
-                { title: "SNS 공유용", url: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?auto=format&fit=crop&q=80&w=1000" },
-                { title: "추모 포스터", url: "https://images.unsplash.com/photo-1518644730709-0835105d9daa?auto=format&fit=crop&q=80&w=1000" },
-                { title: "모금 안내", url: "https://images.unsplash.com/photo-1532629345422-7515f3d16335?auto=format&fit=crop&q=80&w=1000" }
+                { title: "거리 캠페인용", url: "https://images.unsplash.com/photo-1599059813005-11265ba4b4ce?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
+                { title: "SNS 공유용", url: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
+                { title: "추모 포스터", url: "https://images.unsplash.com/photo-1518644730709-0835105d9daa?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
+                { title: "모금 안내", url: "https://images.unsplash.com/photo-1532629345422-7515f3d16335?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" }
             ]
         };
         this.save(defaultData);
