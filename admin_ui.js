@@ -1,5 +1,5 @@
 import { DataStore } from './data_store.js';
-import { formatCurrency, showToast, sanitize } from './utils.js';
+import { formatCurrency, showToast, sanitize, randomThanks } from './utils.js';
 
 export const AdminUI = {
     init() {
@@ -89,6 +89,7 @@ export const AdminUI = {
                                 <div class="flex flex-col flex-1 gap-1">
                                     <input id="edit-donor-name-${i}" value="${sanitize(d.name)}" class="border p-2 rounded text-sm text-right">
                                     <input id="edit-donor-amount-${i}" value="${formatCurrency(d.amount)}" class="border p-2 rounded text-sm text-right" inputmode="numeric">
+                                    <input id="edit-donor-msg-${i}" value="${sanitize(d.aiMsg || '')}" class="border p-2 rounded text-xs text-right" placeholder="감사 문구">
                                     <span class="text-[11px] text-gray-400">등록/수정: ${formatted || '—'}</span>
                                 </div>
                                 <div class="flex gap-1 shrink-0">
@@ -100,7 +101,8 @@ export const AdminUI = {
                         return `<div class="flex justify-between items-center border-b p-2 text-sm">
                             <div class="flex flex-col">
                                 <span class="font-bold text-gray-800">${sanitize(d.name)} <span class="text-primary">(${formatCurrency(d.amount)})</span></span>
-                                <span class="text-[11px] text-gray-500">${formatted}</span>
+                                <span class="text-xs text-gray-500">"${sanitize(d.aiMsg || '')}"</span>
+                                <span class="text-[11px] text-gray-400">${formatted}</span>
                             </div>
                             <div class="flex gap-2 shrink-0">
                                 <button onclick="window.editDonor(${i})" class="text-blue-500 text-xs border border-blue-200 px-2 py-1 rounded">수정</button>
@@ -157,54 +159,61 @@ export const AdminUI = {
             e.target.setSelectionRange(formatted.length, formatted.length);
         });
 
-        document.getElementById('save-base').onclick = () => { 
-            data.settings.baseAmount = parseInput(document.getElementById('base-amount').value); 
-            DataStore.save(data); 
-            window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
-            baseToast('현재 후원금액이 적용되었습니다.');
-        };
-        document.getElementById('add-donor-form').onsubmit = (e) => {
-            e.preventDefault();
-            const inputs = e.target.querySelectorAll('input');
-            const now = new Date();
-            data.donations.unshift({ 
-                name: inputs[0].value, 
-                amount: parseInput(inputs[1].value), 
-                aiMsg: "감사합니다", 
-                date: now.toISOString().split('T')[0],
-                timestamp: now.toISOString()
-            });
-            DataStore.save(data);
-            this.renderDashboard('donation');
-        };
-        window.delDonor = (i) => { data.donations.splice(i,1); DataStore.save(data); this.renderDashboard('donation'); };
-        window.editDonor = (i) => { editingIndex = i; container.innerHTML = renderList(); };
-        window.cancelEditDonor = () => { editingIndex = null; container.innerHTML = renderList(); };
-        window.saveDonor = (i) => {
-            const item = data.donations[i];
-            if(!item) return;
-            const nameEl = document.getElementById(`edit-donor-name-${i}`);
-            const amtEl = document.getElementById(`edit-donor-amount-${i}`);
-            item.name = nameEl?.value || item.name;
-            item.amount = parseInput(amtEl?.value || item.amount) || 0;
-            item.timestamp = new Date().toISOString();
-            DataStore.save(data);
-            editingIndex = null;
-            container.innerHTML = renderList();
+        const bindEvents = () => {
+            const attachAmountFormatter = (selector) => {
+                const el = container.querySelector(selector);
+                if(!el) return;
+                el.addEventListener('input', (e) => {
+                    const formatted = formatInput(e.target.value);
+                    e.target.value = formatted;
+                    e.target.setSelectionRange(formatted.length, formatted.length);
+                });
+            };
+            attachAmountFormatter('#add-donor-amount');
+            data.donations.forEach((_, i) => attachAmountFormatter(`#edit-donor-amount-${i}`));
+
+            document.getElementById('save-base').onclick = () => { 
+                data.settings.baseAmount = parseInput(document.getElementById('base-amount').value); 
+                DataStore.save(data); 
+                window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+                baseToast('현재 후원금액이 적용되었습니다.');
+            };
+            document.getElementById('add-donor-form').onsubmit = (e) => {
+                e.preventDefault();
+                const inputs = e.target.querySelectorAll('input');
+                const now = new Date();
+                data.donations.unshift({ 
+                    name: inputs[0].value, 
+                    amount: parseInput(inputs[1].value), 
+                    aiMsg: randomThanks(), 
+                    date: now.toISOString().split('T')[0],
+                    timestamp: now.toISOString()
+                });
+                DataStore.save(data);
+                this.renderDashboard('donation');
+            };
+            window.delDonor = (i) => { data.donations.splice(i,1); DataStore.save(data); this.renderDashboard('donation'); };
+            window.editDonor = (i) => { editingIndex = i; container.innerHTML = renderList(); bindEvents(); };
+            window.cancelEditDonor = () => { editingIndex = null; container.innerHTML = renderList(); bindEvents(); };
+            window.saveDonor = (i) => {
+                const item = data.donations[i];
+                if(!item) return;
+                const nameEl = document.getElementById(`edit-donor-name-${i}`);
+                const amtEl = document.getElementById(`edit-donor-amount-${i}`);
+                const msgEl = document.getElementById(`edit-donor-msg-${i}`);
+                item.name = nameEl?.value || item.name;
+                item.amount = parseInput(amtEl?.value || item.amount) || 0;
+                item.aiMsg = msgEl?.value || item.aiMsg || '';
+                item.timestamp = new Date().toISOString();
+                DataStore.save(data);
+                editingIndex = null;
+                container.innerHTML = renderList();
+                bindEvents();
+            };
         };
 
-        // attach formatting for add/edit amount inputs
-        const attachAmountFormatter = (selector) => {
-            const el = container.querySelector(selector);
-            if(!el) return;
-            el.addEventListener('input', (e) => {
-                const formatted = formatInput(e.target.value);
-                e.target.value = formatted;
-                e.target.setSelectionRange(formatted.length, formatted.length);
-            });
-        };
-        attachAmountFormatter('#add-donor-amount');
-        data.donations.forEach((_, i) => attachAmountFormatter(`#edit-donor-amount-${i}`));
+        container.innerHTML = renderList();
+        bindEvents();
     },
     renderResourcesMgr(container, data) {
         container.innerHTML = `
@@ -247,6 +256,8 @@ export const AdminUI = {
         };
     },
     renderFlowMgr(container, data) {
+        const petitions = data.petitions || [];
+        const signatures = data.signatures || [];
         const sectionsMeta = [
             { id: 'hero', name: '타이틀' },
             { id: 'story', name: '우리가 기억해야 할 이야기' },
@@ -254,10 +265,13 @@ export const AdminUI = {
             { id: 'plan', name: '세부 후원 계획' },
             { id: 'resources', name: '행사 자료 패키지' },
             { id: 'posters', name: '캠페인 포스터 갤러리' },
-            { id: 'community', name: '응원의 한마디 / 서명' },
+            { id: 'community', name: '양식 / 서명 섹션' },
+            { id: 'sign', name: '서명하기' },
             { id: 'donate', name: '후원하기' }
         ];
-        let currentOrder = (data.settings.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder : sectionsMeta.map(s=>s.id));
+        const baseOrder = sectionsMeta.map(s=>s.id);
+        let currentOrder = (data.settings.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder.slice() : baseOrder.slice());
+        baseOrder.forEach(id => { if(!currentOrder.includes(id)) currentOrder.push(id); });
         const hiddenSet = new Set(data.settings.hiddenSections || []);
         const posters = data.posters || [];
         const iconOptions = ['heart','scale','home','graduation-cap','shield','star','sparkles','users','hand-heart','thumbs-up','alert-triangle','clock','globe','target','briefcase','book-open','award','message-circle','check-circle','shield-check'];
@@ -446,22 +460,125 @@ export const AdminUI = {
                         </div>
                     </div>
 
-                    <div id="flow-panel-community" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
-                        <div class="flex items-center gap-2 mb-2"><i data-lucide="message-circle" class="w-4 h-4 text-primary"></i><h4 class="font-bold">응원 / 서명</h4></div>
-                        <div class="grid md:grid-cols-2 gap-3">
-                            <div><label class="text-xs text-gray-500">응원 제목</label><input id="flow-comments-title" value="${sanitize(data.flowTexts?.commentsTitle || '')}" class="w-full border p-2 rounded"></div>
-                            <div><label class="text-xs text-gray-500">응원 안내문</label><input id="flow-comments-note" value="${sanitize(data.flowTexts?.commentsNote || '')}" class="w-full border p-2 rounded"></div>
+                    <div id="flow-panel-community" class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <div class="flex items-center gap-2 mb-2"><i data-lucide="file-text" class="w-4 h-4 text-primary"></i><h4 class="font-bold">양식/서명 섹션</h4></div>
+                        <div class="grid md:grid-cols-1 gap-3">
+                            <div class="md:col-span-1"><label class="text-xs text-gray-500">탄원서 양식 다운로드 URL</label><input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf"></div>
+                        </div>
+                        <div class="border-t pt-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="table" class="w-4 h-4 text-primary"></i>
+                                <h5 class="font-bold text-sm">제출 현황</h5>
+                                <span class="text-xs text-gray-400">(${petitions.length})</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                ${petitions.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 제출된 서명이 없습니다.</div>` : `
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="text-xs text-gray-500 border-b">
+                                        <tr>
+                                            <th class="py-2 px-2">성명</th>
+                                            <th class="py-2 px-2">문서</th>
+                                            <th class="py-2 px-2">제출 시간</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${petitions.slice().reverse().map(p => {
+                                            const ts = p.timestamp || p.date;
+                                            const dt = ts ? new Date(ts) : null;
+                                            const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                                            return `<tr>
+                                                <td class="py-2 px-2">${sanitize(p.name)}</td>
+                                                <td class="py-2 px-2">${sanitize(p.fileName || '업로드 없음')}</td>
+                                                <td class="py-2 px-2 text-gray-500 text-xs">${formatted}</td>
+                                            </tr>`;
+                                        }).join('')}
+                                    </tbody>
+                                </table>`}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="flow-panel-sign" class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 mb-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">서명하기</h4></div>
+                            <div class="flex items-center gap-2 text-xs text-gray-500">
+                                <span>총 서명: <span class="font-bold text-gray-800">${signatures.length}</span></span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
+                        <div class="overflow-x-auto">
+                            ${signatures.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 서명이 없습니다.</div>` : `
+                            <table class="min-w-full text-left text-sm">
+                                <thead class="text-xs text-gray-500 border-b">
+                                    <tr>
+                                        <th class="py-2 px-2">성명</th>
+                                        <th class="py-2 px-2">연락처</th>
+                                        <th class="py-2 px-2">주민번호(앞 6)</th>
+                                        <th class="py-2 px-2">시간</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${signatures.slice().reverse().map(s => {
+                                        const dt = s.timestamp ? new Date(s.timestamp) : null;
+                                        const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                                        return `<tr>
+                                            <td class="py-2 px-2">${sanitize(s.name)}</td>
+                                            <td class="py-2 px-2">${sanitize(s.phone)}</td>
+                                            <td class="py-2 px-2">${sanitize(s.ssn)}</td>
+                                            <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>`}
                         </div>
                     </div>
 
                     <div id="flow-panel-donate" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
                         <div class="flex items-center gap-2 mb-2"><i data-lucide="gift" class="w-4 h-4 text-primary"></i><h4 class="font-bold">후원 섹션</h4></div>
-                        <input id="flow-donate-title" value="${sanitize(data.flowTexts?.donateTitle || '')}" class="w-full border p-3 rounded text-lg">
+                        <input id="flow-donate-title" value="${sanitize(data.flowTexts?.donateTitle || '')}" class="w-full border p-3 rounded text-lg" placeholder="후원 섹션 제목">
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500">후원하기 버튼 이동 URL</label>
+                                <input id="flow-donate-main-url" value="${sanitize(data.settings?.donateMainUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">카카오페이 URL</label>
+                                <input id="flow-donate-kakao-url" value="${sanitize(data.settings?.donateKakaoUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">해피빈 URL</label>
+                                <input id="flow-donate-happy-url" value="${sanitize(data.settings?.donateHappyUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500">예금주</label>
+                                <input id="flow-acc-owner" value="${sanitize(data.settings?.accountOwner || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">은행</label>
+                                <input id="flow-acc-bank" value="${sanitize(data.settings?.accountBank || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">계좌번호</label>
+                                <input id="flow-acc-number" value="${sanitize(data.settings?.accountNumber || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                        </div>
                     </div>
 
                     <div id="flow-panel-footer" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
                         <div class="flex items-center gap-2 mb-2"><i data-lucide="layers" class="w-4 h-4 text-primary"></i><h4 class="font-bold">푸터 정보</h4></div>
                         <textarea id="edit-footer-desc" class="w-full border p-3 rounded h-20">${sanitize(data.settings.footerDesc)}</textarea>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500">문의 전화</label>
+                                <input id="edit-footer-phone" value="${sanitize(data.settings.footerPhone || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">이메일</label>
+                                <input id="edit-footer-email" value="${sanitize(data.settings.footerEmail || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                        </div>
                     </div>
 
                     <button id="save-flow" class="w-full bg-primary text-white py-3 rounded-lg font-bold">저장하기</button>
@@ -482,6 +599,7 @@ export const AdminUI = {
                 resources: 'flow-panel-assets',
                 posters: 'flow-panel-assets',
                 community: 'flow-panel-community',
+                sign: 'flow-panel-sign',
                 donate: 'flow-panel-donate'
             };
             const containerPanels = document.getElementById('flow-edit-panels');
@@ -619,7 +737,16 @@ export const AdminUI = {
             data.hero.subtitle = getVal('edit-hero-sub', data.hero.subtitle);
             data.hero.image = getVal('flow-hero-image', data.hero.image);
             data.settings.footerDesc = getVal('edit-footer-desc', data.settings.footerDesc);
+            data.settings.footerPhone = getVal('edit-footer-phone', data.settings.footerPhone || '');
+            data.settings.footerEmail = getVal('edit-footer-email', data.settings.footerEmail || '');
             data.settings.hiddenSections = Array.from(new Set(data.settings.hiddenSections || []));
+            data.settings.petitionFormUrl = getVal('flow-petition-link', data.settings?.petitionFormUrl || '');
+            data.settings.donateMainUrl = getVal('flow-donate-main-url', data.settings?.donateMainUrl || '');
+            data.settings.donateKakaoUrl = getVal('flow-donate-kakao-url', data.settings?.donateKakaoUrl || '');
+            data.settings.donateHappyUrl = getVal('flow-donate-happy-url', data.settings?.donateHappyUrl || '');
+            data.settings.accountOwner = getVal('flow-acc-owner', data.settings?.accountOwner || '');
+            data.settings.accountBank = getVal('flow-acc-bank', data.settings?.accountBank || '');
+            data.settings.accountNumber = getVal('flow-acc-number', data.settings?.accountNumber || '');
             data.flowTexts = {
                 storyTitle: getVal('flow-story-title', data.flowTexts?.storyTitle || ''),
                 storyDesc: getVal('flow-story-desc', data.flowTexts?.storyDesc || ''),
@@ -734,8 +861,95 @@ export const AdminUI = {
         }
     },
     renderBudgetMgr(container, data) {
-        container.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-sm flex gap-8"><div class="w-1/3 h-64"><canvas id="adminBudgetChart"></canvas></div><div class="w-2/3" id="budget-items"></div></div>`;
-        new Chart(document.getElementById('adminBudgetChart'), { type: 'pie', data: { labels: data.budget.map(b=>b.label), datasets: [{ data: data.budget.map(b=>b.value), backgroundColor: data.budget.map(b=>b.color) }] } });
+        const target = Number(data.settings?.targetAmount) || 0;
+        const palette = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#00A29D', '#FF6B6B'];
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm flex flex-col gap-6">
+                <div class="flex gap-6 flex-col lg:flex-row">
+                    <div class="lg:w-1/3 h-64">
+                        <canvas id="adminBudgetChart"></canvas>
+                    </div>
+                    <div class="lg:w-2/3 space-y-3" id="budget-items">
+                        ${data.budget.map((b,i)=>`
+                            <div class="flex items-center gap-3 border rounded-lg p-3">
+                                <div class="flex-1">
+                                    <label class="text-[11px] text-gray-500">항목명</label>
+                                    <input id="budget-label-${i}" value="${sanitize(b.label)}" class="w-full border p-2 rounded text-sm">
+                                </div>
+                                <div class="w-28">
+                                    <label class="text-[11px] text-gray-500">비율(%)</label>
+                                    <input id="budget-perc-${i}" type="number" min="0" max="100" step="0.1" value="${b.value}" class="border p-2 rounded w-full text-right">
+                                </div>
+                                <div class="text-sm text-gray-600 min-w-[120px] text-right">≈ ${formatCurrency(Math.round(target * (Number(b.value||0)/100)))}원</div>
+                                <button class="text-red-500 text-xs border border-red-200 px-2 py-1 rounded" onclick="window.delBudgetItem(${i})">삭제</button>
+                            </div>
+                        `).join('')}
+                        <button id="add-budget-item" class="w-full border border-dashed border-gray-300 text-gray-600 hover:border-primary hover:text-primary rounded-lg py-2 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> 항목 추가</button>
+                    </div>
+                </div>
+                <button id="save-budget" class="self-end bg-primary text-white px-4 py-2 rounded font-bold">저장</button>
+            </div>`;
+
+        new Chart(document.getElementById('adminBudgetChart'), { type: 'pie', data: { labels: data.budget.map(b=>b.label), datasets: [{ data: data.budget.map(b=>target*(Number(b.value||0)/100)), backgroundColor: data.budget.map(b=>b.color) }] } });
+
+        const budgetToast = (msg) => {
+            let toast = document.getElementById('admin-toast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'admin-toast';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '12000';
+                toast.style.padding = '12px 16px';
+                toast.style.background = '#111827';
+                toast.style.color = 'white';
+                toast.style.borderRadius = '10px';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.pointerEvents = 'none';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+            }, 2000);
+        };
+
+        document.getElementById('save-budget').onclick = () => {
+            const updated = data.budget.map((b,i)=>({
+                ...b,
+                label: document.getElementById(`budget-label-${i}`)?.value || b.label,
+                value: Number(document.getElementById(`budget-perc-${i}`)?.value || b.value) || 0
+            }));
+            const totalPerc = updated.reduce((s,b)=>s+Number(b.value||0),0);
+            if(totalPerc > 100.0001) {
+                budgetToast(`비율 합계가 ${totalPerc.toFixed(1)}% 입니다. 100% 이내로 맞춰주세요.`);
+                return;
+            }
+            data.budget = updated;
+            DataStore.save(data);
+            window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+            this.renderDashboard('budget');
+            budgetToast('예산 비율이 저장되었습니다.');
+        };
+
+        window.delBudgetItem = (i) => {
+            data.budget.splice(i,1);
+            DataStore.save(data);
+            this.renderDashboard('budget');
+        };
+        document.getElementById('add-budget-item').onclick = () => {
+            const nextColor = palette[data.budget.length % palette.length];
+            data.budget.push({ label: '새 항목', value: 0, color: nextColor });
+            DataStore.save(data);
+            this.renderDashboard('budget');
+        };
     },
     renderPosterMgr(container, data) {
         const posters = data.posters || [];

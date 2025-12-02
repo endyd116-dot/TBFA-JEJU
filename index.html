@@ -274,14 +274,14 @@
             <div class="bg-blue-50 rounded-[2.5rem] p-8 md:p-12 border border-blue-100 relative overflow-hidden">
                 <div class="relative z-10 grid md:grid-cols-2 gap-8">
                     <div class="bg-white p-8 rounded-2xl shadow-sm">
-                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="download" class="w-5 h-5 text-gray-400"></i> 1. 양식 받기</h4>
+                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="download" class="w-5 h-5 text-gray-400"></i> 1. 탄원서 받기</h4>
                         <p class="text-sm text-gray-500 mb-6">AI가 생성한 탄원서 양식을 인쇄하여 서명하세요.</p>
                         <button id="download-petition-btn" class="w-full border-2 border-primary text-primary py-3 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
                             <i data-lucide="printer" class="w-4 h-4"></i> 탄원서 양식 인쇄
                         </button>
                     </div>
                     <div class="bg-white p-8 rounded-2xl shadow-sm">
-                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="upload" class="w-5 h-5 text-gray-400"></i> 2. 서명 제출</h4>
+                        <h4 class="font-bold mb-4 flex items-center gap-2 text-lg"><i data-lucide="upload" class="w-5 h-5 text-gray-400"></i> 2. 탄원서 제출</h4>
                         <form id="petition-form" class="space-y-4">
                             <input type="text" id="pet-name" placeholder="서명자 성명" class="w-full border p-3 rounded-xl text-sm bg-gray-50" required>
                             <div class="relative border border-dashed border-gray-300 rounded-xl p-4 hover:bg-gray-50 transition-colors">
@@ -295,6 +295,32 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Signature Section -->
+    <section id="sign" class="py-24 bg-gray-50 border-t border-b border-gray-200">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900">서명하기</h3>
+                        <p class="text-sm text-gray-500 mt-1">이름, 연락처, 주민번호 앞 6자리를 입력해 서명해주세요.</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-500">총 서명</span>
+                        <div class="text-3xl font-bold text-primary" id="sign-total-count">0</div>
+                    </div>
+                </div>
+                <form id="sign-form" class="grid md:grid-cols-3 gap-3">
+                    <input id="sign-name" required placeholder="성명" class="border p-3 rounded-lg bg-gray-50">
+                    <input id="sign-phone" required placeholder="전화번호" class="border p-3 rounded-lg bg-gray-50" inputmode="tel">
+                    <input id="sign-ssn" required placeholder="주민번호 앞 6자리" class="border p-3 rounded-lg bg-gray-50" maxlength="6" pattern="[0-9]{6}" title="숫자 6자리" inputmode="numeric">
+                    <div class="md:col-span-3">
+                        <button type="submit" class="w-full bg-primary text-white py-3 rounded-xl font-bold">서명하기</button>
+                    </div>
+                </form>
             </div>
         </div>
     </section>
@@ -362,8 +388,8 @@
             <div class="flex flex-col md:items-end gap-6">
                 <button id="footer-login-trigger" class="hover:text-white transition-colors text-gray-600 text-xs flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> 관리자 로그인</button>
                 <div class="text-left md:text-right space-y-1 opacity-80">
-                    <p>문의: 010-7151-6993</p>
-                    <p>이메일: <a href="mailto:support@email.com" class="hover:text-white">support@email.com</a></p>
+                    <p>문의: <span id="footer-phone-text">010-7151-6993</span></p>
+                    <p>이메일: <a id="footer-email-link" href="mailto:support@email.com" class="hover:text-white"><span id="footer-email-text">support@email.com</span></a></p>
                 </div>
             </div>
         </div>

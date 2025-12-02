@@ -4,6 +4,10 @@ import { AdminUI } from './admin_ui.js';
 import { Tracker } from './tracker.js';
 import { formatCurrency, showToast, sanitize } from './utils.js';
 
+let commentTimer = null;
+let commentPage = 0;
+let donorTimer = null; // legacy ticker (unused with CSS ticker)
+
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
     initApp();
@@ -36,6 +40,12 @@ function renderContent(data) {
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
+    const phoneEl = document.getElementById('footer-phone-text');
+    if(phoneEl) phoneEl.textContent = data.settings.footerPhone || '';
+    const emailEl = document.getElementById('footer-email-text');
+    const emailLink = document.getElementById('footer-email-link');
+    if(emailEl) emailEl.textContent = data.settings.footerEmail || '';
+    if(emailLink) emailLink.href = `mailto:${data.settings.footerEmail || ''}`;
     
 
     const current = Number(data.settings.baseAmount || 0);
@@ -54,9 +64,16 @@ function renderContent(data) {
 
 
     const donorList = document.getElementById('donor-list-display');
-    donorList.innerHTML = data.donations.slice(0, 5).map(d => 
-        `<div><span class="font-bold text-primary">${sanitize(d.name)}</span>님 <span class="font-bold">${formatCurrency(d.amount)}원</span> 후원 - "${sanitize(d.aiMsg)}"</div>`
-    ).join('');
+    const donors = data.donations.slice(0, 20);
+    if(donors.length === 0) {
+        donorList.innerHTML = '<div class="donor-row text-gray-400">아직 후원이 없습니다.</div>';
+    } else {
+        const rows = donors.map(d => 
+            `<div class="donor-row"><span class="font-bold text-primary">${sanitize(d.name)}</span>님 <span class="font-bold">${formatCurrency(d.amount)}원</span> 후원 - "${sanitize(d.aiMsg)}"</div>`
+        ).join('');
+        const duration = Math.max(8, donors.length * 2);
+        donorList.innerHTML = `<div class="donor-ticker" style="--donor-count:${donors.length}; --donor-duration:${duration}s;">${rows}${rows}</div>`;
+    }
 
 
     const resGrid = document.getElementById('resources-grid');
@@ -85,19 +102,7 @@ function renderContent(data) {
 
     const commentList = document.getElementById('comments-list');
     const approvedComments = data.comments.filter(c => c.approved);
-    if(approvedComments.length === 0) {
-        commentList.innerHTML = '<div class="text-center text-gray-400 py-8">첫 번째 응원 메시지를 남겨주세요.</div>';
-    } else {
-        commentList.innerHTML = approvedComments.map(c => `
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-gray-800 mb-2 leading-relaxed">${sanitize(c.text)}</p>
-                <div class="flex justify-between items-center text-xs text-gray-400">
-                    <span class="font-bold text-gray-600">${sanitize(c.author)}</span>
-                    <span>${c.date}</span>
-                </div>
-            </div>
-        `).join('');
-    }
+    renderComments(approvedComments, commentList);
 
 
     renderStories();
@@ -105,6 +110,8 @@ function renderContent(data) {
     renderPlanList(data);
     applyFlowTexts(data);
     applySectionOrder(data.settings?.sectionOrder);
+    renderPetitions(data);
+    renderSignatures(data);
 }
 
 function setupEventListeners(data) {
@@ -212,15 +219,42 @@ function setupEventListeners(data) {
         e.preventDefault();
         const name = document.getElementById('pet-name').value;
         const meta = Tracker.getVisitorInfo();
+        const fileInput = document.getElementById('pet-file');
+        const file = fileInput?.files?.[0];
+        const fileName = file ? file.name : '';
+        const now = new Date();
         
         data.petitions.push({
             name,
-            date: new Date().toISOString(),
-            ip: meta.ip
+            date: now.toISOString(),
+            ip: meta.ip,
+            fileName,
+            timestamp: now.toISOString()
         });
         DataStore.save(data);
         showToast('서명이 제출되었습니다. 감사합니다.');
         e.target.reset();
+        document.getElementById('pet-file-name').classList.add('hidden');
+        renderPetitions(data);
+    });
+
+    document.getElementById('sign-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('sign-name').value;
+        const phone = document.getElementById('sign-phone').value;
+        const ssn = document.getElementById('sign-ssn').value;
+        const now = new Date();
+        data.signatures = data.signatures || [];
+        data.signatures.push({
+            name,
+            phone,
+            ssn,
+            timestamp: now.toISOString()
+        });
+        DataStore.save(data);
+        showToast('서명이 완료되었습니다.');
+        e.target.reset();
+        renderSignatures(data);
     });
     
 
@@ -233,11 +267,19 @@ function setupEventListeners(data) {
     });
     
     document.getElementById('download-petition-btn').addEventListener('click', () => {
-        showToast('탄원서 양식이 다운로드됩니다.');
+        const latest = DataStore.get();
+        const url = latest.settings?.petitionFormUrl;
+        if(url) {
+            window.open(url, '_blank');
+        } else {
+            showToast('관리자가 아직 양식을 등록하지 않았습니다.');
+        }
     });
 
     document.getElementById('main-donate-cms-btn').addEventListener('click', () => {
-        window.location.href = '#donate';
+        const link = data.settings?.donateMainUrl;
+        if(link) window.open(link, '_blank');
+        else window.location.href = '#donate';
     });
     
     document.getElementById('account-info-box').addEventListener('click', () => {
@@ -262,10 +304,12 @@ function setupEventListeners(data) {
         
         if(type === 'kakaopay') {
             title.textContent = '카카오페이 후원';
-            btn.onclick = () => window.open('https://qr.kakaopay.com/Ej8e5jZ', '_blank');
+            const url = data.settings?.donateKakaoUrl || 'https://qr.kakaopay.com/Ej8e5jZ';
+            btn.onclick = () => window.open(url, '_blank');
         } else {
             title.textContent = '해피빈 기부';
-            btn.onclick = () => window.open('https://happybean.naver.com', '_blank');
+            const url = data.settings?.donateHappyUrl || 'https://happybean.naver.com';
+            btn.onclick = () => window.open(url, '_blank');
         }
     };
 
@@ -453,6 +497,95 @@ function renderPlanList(data) {
     }).join('');
 }
 
+function renderPetitions(data) {
+    const table = document.getElementById('petition-table');
+    if(!table) return;
+    const rows = data.petitions || [];
+    if(rows.length === 0) {
+        table.innerHTML = '<div class="text-center text-gray-400 py-6">아직 제출된 서명이 없습니다.</div>';
+        return;
+    }
+    table.innerHTML = `
+        <table class="min-w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 border-b">
+                <tr>
+                    <th class="py-2 px-2">성명</th>
+                    <th class="py-2 px-2">문서</th>
+                    <th class="py-2 px-2">제출 시간</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                ${rows.slice().reverse().map(r => {
+                    const ts = r.timestamp || r.date;
+                    const dt = ts ? new Date(ts) : null;
+                    const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                    return `<tr>
+                        <td class="py-2 px-2">${sanitize(r.name)}</td>
+                        <td class="py-2 px-2">${sanitize(r.fileName || '업로드 없음')}</td>
+                        <td class="py-2 px-2 text-gray-500 text-xs">${formatted}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderSignatures(data) {
+    const totalEl = document.getElementById('sign-total-count');
+    if(totalEl) totalEl.textContent = data.signatures?.length || 0;
+}
+
+function renderComments(approvedComments, container) {
+    if(!container) return;
+    if(commentTimer) {
+        clearInterval(commentTimer);
+        commentTimer = null;
+    }
+    if(approvedComments.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-8">첫 번째 응원 메시지를 남겨주세요.</div>';
+        return;
+    }
+
+    const pageSize = 4;
+    const pages = Math.ceil(approvedComments.length / pageSize);
+    container.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    container.style.transformOrigin = 'center bottom';
+    container.style.opacity = '1';
+    container.style.transform = 'translateY(0)';
+
+    const renderPage = (page) => {
+        const start = page * pageSize;
+        const slice = approvedComments.slice(start, start + pageSize);
+        container.style.opacity = '0';
+        container.style.transform = 'translateY(8px)';
+        setTimeout(() => {
+            container.innerHTML = slice.map(c => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-gray-800 mb-2 leading-relaxed">${sanitize(c.text)}</p>
+                    <div class="flex justify-between items-center text-xs text-gray-400">
+                        <span class="font-bold text-gray-600">${sanitize(c.author)}</span>
+                        <span>${c.date}</span>
+                    </div>
+                </div>
+            `).join('');
+            requestAnimationFrame(() => {
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            });
+        }, 180);
+    };
+
+    commentPage = 0;
+    renderPage(commentPage);
+
+    if(approvedComments.length > pageSize) {
+        commentTimer = setInterval(() => {
+            commentPage = (commentPage + 1) % pages;
+            renderPage(commentPage);
+        }, 5000);
+    }
+}
+
 function applyFlowTexts(data) {
     const t = data.flowTexts || {};
     const setHTML = (id, val) => { const el = document.getElementById(id); if(el && val) el.innerHTML = sanitize(val); };
@@ -472,13 +605,18 @@ function applyFlowTexts(data) {
 }
 
 function applySectionOrder(order) {
+    const baseOrder = ['hero','story','promises','plan','resources','posters','community','sign','donate'];
     const data = typeof order === 'object' && order.settings ? order : { settings: { sectionOrder: order } };
-    const sectionIds = data.settings?.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder : ['hero','story','promises','plan','resources','posters','community','donate'];
+    let sectionIds = data.settings?.sectionOrder && data.settings.sectionOrder.length ? data.settings.sectionOrder.slice() : baseOrder.slice();
+    // ensure all base sections exist in order
+    baseOrder.forEach(id => { if(!sectionIds.includes(id)) sectionIds.push(id); });
     const hidden = new Set(data.settings?.hiddenSections || []);
-    const allIds = ['hero','story','promises','plan','resources','posters','community','donate'];
+    const allIds = baseOrder;
     const footer = document.querySelector('footer');
     if(!footer) return;
+
     const frag = document.createDocumentFragment();
+    // Remove from DOM and re-append in order
     sectionIds.forEach(id => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -487,13 +625,17 @@ function applySectionOrder(order) {
             return;
         }
         el.classList.remove('hidden');
+        if(el.parentElement) el.parentElement.removeChild(el);
         frag.appendChild(el);
     });
-    // Append non-ordered but not hidden sections to preserve display
+    // Append any other sections not listed if not hidden
     allIds.forEach(id => {
         if(sectionIds.includes(id)) return;
         const el = document.getElementById(id);
-        if(el && !hidden.has(id)) frag.appendChild(el);
+        if(el && !hidden.has(id)) {
+            if(el.parentElement) el.parentElement.removeChild(el);
+            frag.appendChild(el);
+        }
     });
     document.body.insertBefore(frag, footer);
 }

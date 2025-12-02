@@ -2,7 +2,12 @@ export const DataStore = {
     get() {
         const data = localStorage.getItem('tbfa_data');
         if (data) {
-            return JSON.parse(data);
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed && parsed.hero && parsed.settings) return parsed;
+            } catch (e) {
+                console.warn('Local data parse failed, reinit', e);
+            }
         }
         return this.init();
     },
@@ -11,7 +16,7 @@ export const DataStore = {
             const res = await fetch('/.netlify/functions/data');
             if (!res.ok) throw new Error('remote fetch failed');
             const remote = await res.json();
-            if (remote && Object.keys(remote).length) {
+            if (remote && remote.hero && remote.settings) {
                 localStorage.setItem('tbfa_data', JSON.stringify(remote));
                 return remote;
             }
@@ -75,15 +80,21 @@ export const DataStore = {
                 targetAmount: 200000000,
                 baseAmount: 12500000,
                 footerDesc: "본 캠페인은 교사유가족협의회에서 운영하며,<br>모금된 후원금은 전액 유가족에게 전달됩니다.",
+                footerPhone: "010-7151-6993",
+                footerEmail: "support@email.com",
                 accountOwner: "유가족대표",
                 accountBank: "농협",
                 accountNumber: "351-1234-5678-90",
-                sectionOrder: ['hero','story','promises','plan','resources','posters','community','donate'],
+                sectionOrder: ['hero','story','promises','plan','resources','posters','community','sign','donate'],
                 hiddenSections: [],
                 shareLinks: [
                     { label: "카카오톡 채널", url: "https://pf.kakao.com" },
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
-                ]
+                ],
+                petitionFormUrl: "",
+                donateMainUrl: "",
+                donateKakaoUrl: "https://qr.kakaopay.com/Ej8e5jZ",
+                donateHappyUrl: "https://happybean.naver.com"
             },
             flowTexts: {
                 storyTitle: "우리가 기억해야 할 이야기",
@@ -132,6 +143,7 @@ export const DataStore = {
                 }
             ],
             petitions: [],
+            signatures: [],
             stats: [],
             resources: [
                 { 

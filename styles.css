@@ -25,6 +25,26 @@
     border-radius: 3px;
 }
 
+.donor-row {
+    line-height: 1.3;
+    display: block;
+    min-height: 28px;
+}
+.donor-ticker {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: donor-scroll var(--donor-duration, 12s) linear infinite;
+    will-change: transform;
+}
+
+@keyframes donor-scroll {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(calc(-1 * var(--donor-count) * (28px + 6px))); }
+}
+
+
+
 /* Modal Backdrop */
 .modal-backdrop {
     animation: fadeIn 0.3s ease-out;
