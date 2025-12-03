@@ -7,6 +7,7 @@ import { formatCurrency, showToast, sanitize } from './utils.js';
 let commentTimer = null;
 let commentPage = 0;
 let donorTimer = null; // legacy ticker (unused with CSS ticker)
+let signCanvas, signCtx, isSigning = false, signDirty = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
@@ -241,19 +242,33 @@ function setupEventListeners(data) {
     document.getElementById('sign-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('sign-name').value;
-        const phone = document.getElementById('sign-phone').value;
+        const phoneRaw = document.getElementById('sign-phone').value;
+        const phone = phoneRaw.trim();
+        if(!/^\d{2,3}-\d{3,4}-\d{4}$/.test(phone)) {
+            showToast('연락처를 000-0000-0000 형식으로 입력해주세요.');
+            return;
+        }
         const ssn = document.getElementById('sign-ssn').value;
+        const signData = document.getElementById('sign-data').value;
+        if(!signData) {
+            showToast('서명을 입력해주세요.');
+            return;
+        }
         const now = new Date();
         data.signatures = data.signatures || [];
         data.signatures.push({
             name,
             phone,
             ssn,
-            timestamp: now.toISOString()
+            timestamp: now.toISOString(),
+            signData
         });
         DataStore.save(data);
         showToast('서명이 완료되었습니다.');
         e.target.reset();
+        document.getElementById('sign-data').value = '';
+        signDirty = false;
+        document.getElementById('sign-status').textContent = '서명을 입력하세요.';
         renderSignatures(data);
     });
     
@@ -266,6 +281,83 @@ function setupEventListeners(data) {
         }
     });
     
+    // Signature pad
+    const signModal = document.getElementById('sign-modal');
+    const openPad = document.getElementById('open-sign-pad');
+    const closePad = document.getElementById('sign-modal-close');
+    signCanvas = document.getElementById('sign-canvas');
+    signCtx = signCanvas ? signCanvas.getContext('2d') : null;
+
+    const setStatus = (msg) => { const s = document.getElementById('sign-status'); if(s) s.textContent = msg; };
+
+    const startSign = (x, y) => {
+        if(!signCtx) return;
+        signCtx.beginPath();
+        signCtx.moveTo(x, y);
+        isSigning = true;
+    };
+    const drawSign = (x, y) => {
+        if(!isSigning || !signCtx) return;
+        signCtx.lineTo(x, y);
+        signCtx.strokeStyle = '#111827';
+        signCtx.lineWidth = 2;
+        signCtx.lineCap = 'round';
+        signCtx.stroke();
+        signDirty = true;
+    };
+    const endSign = () => { isSigning = false; };
+
+    if(signCanvas) {
+        const getPos = (e) => {
+            const rect = signCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        };
+        signCanvas.addEventListener('mousedown', (e)=>{ const p=getPos(e); startSign(p.x,p.y);} );
+        signCanvas.addEventListener('mousemove', (e)=>{ const p=getPos(e); drawSign(p.x,p.y);} );
+        signCanvas.addEventListener('mouseup', endSign);
+        signCanvas.addEventListener('mouseleave', endSign);
+        signCanvas.addEventListener('touchstart', (e)=>{ const p=getPos(e); startSign(p.x,p.y); e.preventDefault(); });
+        signCanvas.addEventListener('touchmove', (e)=>{ const p=getPos(e); drawSign(p.x,p.y); e.preventDefault(); });
+        signCanvas.addEventListener('touchend', endSign);
+    }
+
+    const clearSign = () => {
+        if(signCtx && signCanvas) {
+            signCtx.clearRect(0,0,signCanvas.width, signCanvas.height);
+            signDirty=false;
+            setStatus('서명을 입력하세요.');
+        }
+    };
+
+    if(openPad) openPad.addEventListener('click', () => {
+        if(signModal) signModal.classList.remove('hidden');
+        // resize canvas to visible size for proper dataURL
+        if(signCanvas) {
+            const rect = signCanvas.getBoundingClientRect();
+            if(rect.width && rect.height) {
+                signCanvas.width = rect.width;
+                signCanvas.height = rect.height;
+            }
+        }
+        clearSign();
+    });
+    if(closePad) closePad.addEventListener('click', () => {
+        if(signModal) signModal.classList.add('hidden');
+    });
+    const clearBtn = document.getElementById('sign-clear');
+    if(clearBtn) clearBtn.addEventListener('click', clearSign);
+    const saveBtn = document.getElementById('sign-save');
+    if(saveBtn) saveBtn.addEventListener('click', () => {
+        if(!signDirty) { setStatus('서명을 입력해주세요.'); return; }
+        const dataUrl = signCanvas.toDataURL('image/png');
+        const hidden = document.getElementById('sign-data');
+        if(hidden) hidden.value = dataUrl;
+        setStatus('서명이 저장되었습니다.');
+        if(signModal) signModal.classList.add('hidden');
+    });
+
     document.getElementById('download-petition-btn').addEventListener('click', () => {
         const latest = DataStore.get();
         const url = latest.settings?.petitionFormUrl;

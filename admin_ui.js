@@ -503,6 +503,7 @@ export const AdminUI = {
                             <div class="flex items-center gap-2 mb-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">서명하기</h4></div>
                             <div class="flex items-center gap-2 text-xs text-gray-500">
                                 <span>총 서명: <span class="font-bold text-gray-800">${signatures.length}</span></span>
+                                <button id="export-signatures" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
                             </div>
                         </div>
                         <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
@@ -514,17 +515,19 @@ export const AdminUI = {
                                         <th class="py-2 px-2">성명</th>
                                         <th class="py-2 px-2">연락처</th>
                                         <th class="py-2 px-2">주민번호(앞 6)</th>
+                                        <th class="py-2 px-2">서명</th>
                                         <th class="py-2 px-2">시간</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    ${signatures.slice().reverse().map(s => {
+                                    ${signatures.map((s,i)=>({s,i})).reverse().map(({s,i}) => {
                                         const dt = s.timestamp ? new Date(s.timestamp) : null;
                                         const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
                                         return `<tr>
                                             <td class="py-2 px-2">${sanitize(s.name)}</td>
                                             <td class="py-2 px-2">${sanitize(s.phone)}</td>
                                             <td class="py-2 px-2">${sanitize(s.ssn)}</td>
+                                            <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
                                             <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
                                         </tr>`;
                                     }).join('')}
@@ -589,6 +592,18 @@ export const AdminUI = {
             const list = document.getElementById('section-order-list');
             if(list) list.innerHTML = orderList();
             if(window.lucide) lucide.createIcons();
+        };
+
+        window.viewSignature = (i) => {
+            const item = data.signatures && data.signatures[i];
+            if(!item || !item.signData) {
+                showAdminToast('서명 데이터가 없습니다.');
+                return;
+            }
+            const win = window.open();
+            if(!win) { showAdminToast('팝업이 차단되었습니다.'); return; }
+            const safeSrc = item.signData.replace(/"/g,'&quot;');
+            win.document.write(`<html><head><title>서명보기</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#f8fafc;"><img src="${safeSrc}" style="max-width:100%;max-height:100vh;"/></body></html>`);
         };
         const reorderEditPanels = () => {
             const panelMap = {
@@ -809,6 +824,56 @@ export const AdminUI = {
             const img = document.getElementById(`flow-story-thumb-${i}`);
             if(img) img.src = url;
         };
+
+        const exportSignatures = () => {
+            if(!data.signatures || data.signatures.length === 0) {
+                showAdminToast('다운로드할 서명이 없습니다.');
+                return;
+            }
+            const headers = ['성명','연락처','주민번호앞6','서명이미지','시간'];
+            const rows = data.signatures.map(s => {
+                const dt = s.timestamp ? new Date(s.timestamp) : null;
+                const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                const imgHtml = s.signData ? `<img src="${s.signData}" style="max-height:200px; max-width:200px;"/>` : '-';
+                return [sanitize(s.name), sanitize(s.phone), sanitize(s.ssn), imgHtml, formatted];
+            });
+            const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>서명 리스트</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 16px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+th { background: #f3f4f6; text-align: left; }
+</style>
+</head>
+<body>
+<h2>서명 리스트 (${data.signatures.length}건)</h2>
+<table>
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>
+        ${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+</table>
+</body>
+</html>`;
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `signatures_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAdminToast('서명 리스트를 다운로드했습니다.');
+        };
+
+        const exportBtn = document.getElementById('export-signatures');
+        if(exportBtn) exportBtn.onclick = exportSignatures;
 
         const syncStoryInputs = () => {
             if(!data.storyBlocks) return;
