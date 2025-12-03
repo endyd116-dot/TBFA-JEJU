@@ -73,11 +73,15 @@ export const AdminUI = {
                 </div>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm">
-                <h3 class="font-bold mb-4">후원자 목록 (최근순)</h3>
-                <form id="add-donor-form" class="mb-4 flex flex-wrap items-center gap-2 md:gap-3">
-                    <input placeholder="이름" class="border p-2 rounded text-right flex-1 min-w-[140px]" required>
-                    <input type="text" id="add-donor-amount" placeholder="금액" class="border p-2 rounded text-right flex-1 min-w-[160px]" inputmode="numeric">
-                    <button class="bg-green-500 text-white px-4 py-2 rounded whitespace-nowrap">추가</button>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold">후원자 목록 (최근순)</h3>
+                    <div class="text-sm text-gray-600">총 후원액: <span class="font-bold text-primary">${formatCurrency(data.donations.reduce((s,d)=>s+Number(d.amount||0),0))}원</span></div>
+                </div>
+                <form id="add-donor-form" class="mb-4 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                    <input placeholder="이름" class="border p-2 rounded text-right md:col-span-2" required>
+                    <input type="text" id="add-donor-amount" placeholder="금액" class="border p-2 rounded text-right md:col-span-2" inputmode="numeric">
+                    <input type="text" id="add-donor-msg" placeholder="응원 한마디 (선택)" class="border p-2 rounded md:col-span-6 text-sm">
+                    <button class="bg-green-500 text-white px-4 py-2 rounded whitespace-nowrap md:col-span-2">추가</button>
                 </form>
                 <div class="border-t pt-2 max-h-96 overflow-y-auto">
                     ${data.donations.map((d,i) => {
@@ -181,11 +185,13 @@ export const AdminUI = {
             document.getElementById('add-donor-form').onsubmit = (e) => {
                 e.preventDefault();
                 const inputs = e.target.querySelectorAll('input');
+                const msgInput = document.getElementById('add-donor-msg');
+                const msgVal = msgInput ? msgInput.value : '';
                 const now = new Date();
                 data.donations.unshift({ 
                     name: inputs[0].value, 
                     amount: parseInput(inputs[1].value), 
-                    aiMsg: randomThanks(), 
+                    aiMsg: msgVal || randomThanks(), 
                     date: now.toISOString().split('T')[0],
                     timestamp: now.toISOString()
                 });
