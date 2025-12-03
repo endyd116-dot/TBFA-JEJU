@@ -315,7 +315,7 @@
                 </div>
                 <form id="sign-form" class="grid md:grid-cols-3 gap-3">
                     <input id="sign-name" required placeholder="성명" class="border p-3 rounded-lg bg-gray-50">
-                        <input id="sign-phone" type="tel" required placeholder="전화번호 (000-0000-0000)" class="border p-3 rounded-lg bg-gray-50" inputmode="tel" pattern="\\d{2,3}-\\d{3,4}-\\d{4}" title="000-0000-0000 형식으로 입력하세요">
+                        <input id="sign-phone" type="tel" required placeholder="전화번호 (숫자만/하이픈 허용)" class="border p-3 rounded-lg bg-gray-50" inputmode="tel" pattern="[0-9-]{8,13}" title="숫자만 또는 000-0000-0000 형식으로 입력하세요">
                     <div class="flex gap-2 col-span-3 md:col-span-1">
                         <input id="sign-ssn" required placeholder="주민번호 앞 6자리" class="border p-3 rounded-lg bg-gray-50 w-full" maxlength="6" pattern="[0-9]{6}" title="숫자 6자리" inputmode="numeric">
                         <button type="button" id="open-sign-pad" class="bg-gray-900 text-white px-4 rounded-lg text-sm whitespace-nowrap">서명하기</button>

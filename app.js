@@ -243,11 +243,14 @@ function setupEventListeners(data) {
         e.preventDefault();
         const name = document.getElementById('sign-name').value;
         const phoneRaw = document.getElementById('sign-phone').value;
-        const phone = phoneRaw.trim();
-        if(!/^\d{2,3}-\d{3,4}-\d{4}$/.test(phone)) {
-            showToast('연락처를 000-0000-0000 형식으로 입력해주세요.');
+        const digits = phoneRaw.replace(/\D/g, '');
+        if(!(digits.length === 10 || digits.length === 11)) {
+            showToast('연락처를 숫자 10~11자리로 입력해주세요.');
             return;
         }
+        const phone = digits.length === 11
+            ? `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`
+            : `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
         const ssn = document.getElementById('sign-ssn').value;
         const signData = document.getElementById('sign-data').value;
         if(!signData) {
