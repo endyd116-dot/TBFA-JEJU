@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { getStore } = require('@netlify/blobs');
@@ -7,6 +8,27 @@ const respond = (status, body) => ({
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
 });
+
+const verifyToken = (authHeader, secret) => {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token || !secret) return false;
+    if (token === secret) return true; // legacy direct secret support
+
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const [headerPart, payloadPart, signature] = parts;
+    const unsigned = `${headerPart}.${payloadPart}`;
+    const expected = crypto.createHmac('sha256', secret).update(unsigned).digest('base64url');
+    if (signature !== expected) return false;
+
+    try {
+        const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+        if (payload.exp && Date.now() > payload.exp) return false;
+    } catch (err) {
+        return false;
+    }
+    return true;
+};
 
 const STORE_NAME = process.env.DATA_STORE_NAME || 'tbfa-data';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
@@ -42,9 +64,9 @@ exports.handler = async (event) => {
     // POST -> save data (admin only)
     if (event.httpMethod === 'POST') {
         if (!ADMIN_SECRET) return respond(500, { error: 'ADMIN_SECRET not set' });
-        const auth = event.headers.authorization || '';
-        const token = auth.replace(/^Bearer\s+/i, '');
-        if (token !== ADMIN_SECRET) return respond(401, { error: 'Unauthorized' });
+        if (!verifyToken(event.headers.authorization, ADMIN_SECRET)) {
+            return respond(401, { error: 'Unauthorized' });
+        }
 
         let body;
         try {

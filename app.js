@@ -216,20 +216,61 @@ function setupEventListeners(data) {
     });
 
 
-    document.getElementById('petition-form').addEventListener('submit', (e) => {
+    const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result || '');
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
+    const uploadPetitionFile = async (file, submitterName) => {
+        const dataUrl = await readFileAsDataUrl(file);
+        const payload = {
+            fileName: file.name,
+            contentType: file.type || 'application/octet-stream',
+            data: dataUrl,
+            ownerName: submitterName || 'anonymous'
+        };
+        const res = await fetch('/.netlify/functions/petition-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('파일 업로드 실패');
+        const json = await res.json();
+        if (!json.url) throw new Error('업로드 URL을 받지 못했습니다.');
+        return { url: json.url, fileName: json.fileName || file.name };
+    };
+
+    document.getElementById('petition-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('pet-name').value;
         const meta = Tracker.getVisitorInfo();
         const fileInput = document.getElementById('pet-file');
         const file = fileInput?.files?.[0];
-        const fileName = file ? file.name : '';
+        let fileName = file ? file.name : '';
         const now = new Date();
-        
+
+        let fileUrl = '';
+        if(file) {
+            try {
+                const uploaded = await uploadPetitionFile(file, name);
+                fileUrl = uploaded.url;
+                fileName = uploaded.fileName || fileName;
+            }
+            catch (err) {
+                console.warn('파일 업로드 실패', err);
+                showToast('파일 업로드에 실패했습니다. 다시 시도해주세요.');
+                return;
+            }
+        }
+
         data.petitions.push({
             name,
             date: now.toISOString(),
             ip: meta.ip,
             fileName,
+            fileUrl,
             timestamp: now.toISOString()
         });
         DataStore.save(data);

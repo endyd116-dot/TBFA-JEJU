@@ -506,13 +506,25 @@ export const AdminUI = {
                     <div id="flow-panel-community" class="bg-white p-6 rounded-xl shadow-sm space-y-4">
                         <div class="flex items-center gap-2 mb-2"><i data-lucide="file-text" class="w-4 h-4 text-primary"></i><h4 class="font-bold">양식/서명 섹션</h4></div>
                         <div class="grid md:grid-cols-1 gap-3">
-                            <div class="md:col-span-1"><label class="text-xs text-gray-500">탄원서 양식 다운로드 URL</label><input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf"></div>
+                            <div class="md:col-span-1 space-y-1">
+                                <label class="text-xs text-gray-500">탄원서 양식 다운로드 URL</label>
+                                <input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf">
+                                <label class="text-[11px] text-gray-500 block mt-2">파일 업로드</label>
+                                <input type="file" id="flow-petition-upload" accept=".pdf,.doc,.docx,image/*" class="w-full text-[11px]">
+                            </div>
                         </div>
                         <div class="border-t pt-3">
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="table" class="w-4 h-4 text-primary"></i>
-                                <h5 class="font-bold text-sm">제출 현황</h5>
-                                <span class="text-xs text-gray-400">(${petitions.length})</span>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="table" class="w-4 h-4 text-primary"></i>
+                                    <h5 class="font-bold text-sm">제출 현황</h5>
+                                    <span class="text-xs text-gray-400">(${petitions.length})</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>총 제출: <span class="font-bold text-gray-800">${petitions.length}</span></span>
+                                    <button id="download-petition-files" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">파일 저장</button>
+                                    <button id="export-petitions" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 ${petitions.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 제출된 서명이 없습니다.</div>` : `
@@ -531,7 +543,7 @@ export const AdminUI = {
                                             const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
                                             return `<tr>
                                                 <td class="py-2 px-2">${sanitize(p.name)}</td>
-                                                <td class="py-2 px-2">${sanitize(p.fileName || '업로드 없음')}</td>
+                                                <td class="py-2 px-2">${p.fileUrl ? `<a href="${sanitize(p.fileUrl)}" target="_blank" rel="noopener" download="${sanitize(p.fileName || 'file')}">${sanitize(p.fileName || '업로드 없음')}</a>` : sanitize(p.fileName || '업로드 없음')}</td>
                                                 <td class="py-2 px-2 text-gray-500 text-xs">${formatted}</td>
                                             </tr>`;
                                         }).join('')}
@@ -542,40 +554,42 @@ export const AdminUI = {
                     </div>
 
                     <div id="flow-panel-sign" class="bg-white p-6 rounded-xl shadow-sm space-y-4">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2 mb-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">서명하기</h4></div>
-                            <div class="flex items-center gap-2 text-xs text-gray-500">
-                                <span>총 서명: <span class="font-bold text-gray-800">${signatures.length}</span></span>
-                                <button id="export-signatures" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 mb-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">서명하기</h4></div>
+                                <div class="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>총 서명: <span class="font-bold text-gray-800">${signatures.length}</span></span>
+                                    <button id="export-signatures" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
-                        <div class="overflow-x-auto">
-                            ${signatures.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 서명이 없습니다.</div>` : `
-                            <table class="min-w-full text-left text-sm">
-                                <thead class="text-xs text-gray-500 border-b">
-                                    <tr>
-                                        <th class="py-2 px-2">성명</th>
-                                        <th class="py-2 px-2">연락처</th>
-                                        <th class="py-2 px-2">주민번호(앞 6)</th>
-                                        <th class="py-2 px-2">서명</th>
-                                        <th class="py-2 px-2">시간</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    ${signatures.map((s,i)=>({s,i})).reverse().map(({s,i}) => {
-                                        const dt = s.timestamp ? new Date(s.timestamp) : null;
-                                        const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
-                                        return `<tr>
-                                            <td class="py-2 px-2">${sanitize(s.name)}</td>
-                                            <td class="py-2 px-2">${sanitize(s.phone)}</td>
-                                            <td class="py-2 px-2">${sanitize(s.ssn)}</td>
-                                            <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
-                                            <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
-                                        </tr>`;
-                                    }).join('')}
-                                </tbody>
-                            </table>`}
+                            <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
+                            <div class="overflow-x-auto">
+                                ${signatures.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 서명이 없습니다.</div>` : `
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="text-xs text-gray-500 border-b">
+                                        <tr>
+                                            <th class="py-2 px-2">성명</th>
+                                            <th class="py-2 px-2">연락처</th>
+                                            <th class="py-2 px-2">주민번호(앞 6)</th>
+                                            <th class="py-2 px-2">서명</th>
+                                            <th class="py-2 px-2">시간</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${signatures.map((s,i)=>({s,i})).reverse().map(({s,i}) => {
+                                            const dt = s.timestamp ? new Date(s.timestamp) : null;
+                                            const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                                            return `<tr>
+                                                <td class="py-2 px-2">${sanitize(s.name)}</td>
+                                                <td class="py-2 px-2">${sanitize(s.phone)}</td>
+                                                <td class="py-2 px-2">${sanitize(s.ssn)}</td>
+                                                <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
+                                                <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
+                                            </tr>`;
+                                        }).join('')}
+                                    </tbody>
+                                </table>`}
+                            </div>
                         </div>
                     </div>
 
@@ -760,6 +774,27 @@ export const AdminUI = {
             this.renderFlowMgr(container, data);
         };
 
+        const uploadAdminFile = async (file, folder = 'uploads') => {
+            const token = sessionStorage.getItem('tbfa_admin_token') || '';
+            if(!token) throw new Error('관리자 로그인 후 이용해주세요.');
+            const res = await fetch('/.netlify/functions/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': file.type || 'application/octet-stream',
+                    'X-File-Name': encodeURIComponent(file.name || 'upload.bin'),
+                    'X-Upload-Folder': folder
+                },
+                body: file
+            });
+            const payload = await res.json().catch(() => ({}));
+            if(!res.ok) {
+                throw new Error(payload.error || '업로드에 실패했습니다.');
+            }
+            if(!payload.url) throw new Error('업로드된 URL을 받지 못했습니다.');
+            return payload.url;
+        };
+
         // 타이틀 이미지 업로드 → data URL로 미리보기 및 입력란 동기화
         const heroUpload = document.getElementById('flow-hero-upload');
         if(heroUpload) {
@@ -825,6 +860,29 @@ export const AdminUI = {
                 reader.readAsDataURL(file);
             };
         });
+
+        // 탄원서 파일 업로드 → data URL로 저장/미리보기 필드 반영
+        const petitionUpload = document.getElementById('flow-petition-upload');
+        if(petitionUpload) {
+            petitionUpload.onchange = async (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const input = document.getElementById('flow-petition-link');
+                if(input) input.value = '업로드 중...';
+                try {
+                    const url = await uploadAdminFile(file, 'petitions');
+                    if(input) input.value = url;
+                    data.settings = data.settings || {};
+                    data.settings.petitionFormUrl = url;
+                    DataStore.save(data);
+                    showAdminToast('양식 파일을 업로드했습니다. 저장 버튼을 눌러 최종 반영하세요.');
+                } catch (err) {
+                    console.error('Petition upload failed', err);
+                    if(input) input.value = data.settings?.petitionFormUrl || '';
+                    showAdminToast(err?.message || '업로드에 실패했습니다. 다시 시도해주세요.');
+                }
+            };
+        }
 
         window.delMission = (i) => {
             if(!data.promises) return;
@@ -981,8 +1039,93 @@ th { background: #f3f4f6; text-align: left; }
             showAdminToast('서명 리스트를 다운로드했습니다.');
         };
 
+        const exportPetitions = () => {
+            if(!data.petitions || data.petitions.length === 0) {
+                showAdminToast('다운로드할 제출 내역이 없습니다.');
+                return;
+            }
+            const headers = ['성명','파일','시간'];
+            const origin = window.location.origin;
+            const rows = data.petitions.map(p => {
+                const dt = p.timestamp ? new Date(p.timestamp) : (p.date ? new Date(p.date) : null);
+                const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                const safeName = sanitize(p.fileName || '파일 보기');
+                const href = p.fileUrl ? (p.fileUrl.startsWith('http') ? p.fileUrl : `${origin}${p.fileUrl}`) : '';
+                const fileCell = href
+                    ? `<a href="${href}" target="_blank" rel="noopener" download="${safeName}">${safeName}</a>`
+                    : sanitize(p.fileName || '업로드 없음');
+                return [sanitize(p.name), fileCell, formatted];
+            });
+            const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>제출 현황</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 16px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+th { background: #f3f4f6; text-align: left; }
+</style>
+</head>
+<body>
+<h2>제출 현황 (${data.petitions.length}건)</h2>
+<table>
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>
+        ${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+</table>
+</body>
+</html>`;
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `petitions_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAdminToast('제출 현황을 다운로드했습니다.');
+        };
+
         const exportBtn = document.getElementById('export-signatures');
         if(exportBtn) exportBtn.onclick = exportSignatures;
+        const exportPetBtn = document.getElementById('export-petitions');
+        if(exportPetBtn) exportPetBtn.onclick = exportPetitions;
+        const downloadPetFilesBtn = document.getElementById('download-petition-files');
+        if(downloadPetFilesBtn) downloadPetFilesBtn.onclick = async () => {
+            if(!data.petitions || data.petitions.length === 0) {
+                showAdminToast('다운로드할 파일이 없습니다.');
+                return;
+            }
+            const withFiles = data.petitions.filter(p => p.fileUrl);
+            if(withFiles.length === 0) {
+                showAdminToast('첨부된 파일이 없습니다.');
+                return;
+            }
+            showAdminToast('파일을 순차적으로 저장합니다...');
+            for (const p of withFiles) {
+                try {
+                    const res = await fetch(p.fileUrl);
+                    if(!res.ok) throw new Error('fetch failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = (p.fileName || 'petition_file');
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (err) {
+                    console.warn('파일 다운로드 실패', err);
+                }
+            }
+            showAdminToast('파일 다운로드를 완료했습니다.');
+        };
 
         const syncStoryInputs = () => {
             if(!data.storyBlocks) return;
@@ -1261,8 +1404,85 @@ th { background: #f3f4f6; text-align: left; }
         window.delMsg = (i) => { data.comments.splice(i,1); DataStore.save(data); this.renderDashboard('community'); };
         if(window.lucide) lucide.createIcons();
     },
-    renderStats(container, data) {
-        container.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-sm"><h3>총 방문: ${data.stats.length}</h3><div class="h-64 overflow-y-auto text-xs mt-4 space-y-1">${data.stats.slice().reverse().map(s=>`<div class="border-b py-1 flex justify-between"><span>${s.date} ${s.time}</span><span>${s.device}</span><span class="text-gray-400">${s.ip}</span></div>`).join('')}</div></div>`;
+    renderStats(container) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+            <h3 class="font-bold text-lg">방문 통계</h3>
+            <div id="stats-summary" class="text-sm text-gray-500">불러오는 중...</div>
+            <div class="grid md:grid-cols-3 gap-4" id="stats-agg">
+                <div class="border rounded-lg p-3">
+                    <h4 class="font-bold mb-2 text-sm">일간</h4>
+                    <div id="stats-daily" class="text-xs text-gray-600 space-y-1 max-h-48 overflow-y-auto"></div>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <h4 class="font-bold mb-2 text-sm">주간</h4>
+                    <div id="stats-weekly" class="text-xs text-gray-600 space-y-1 max-h-48 overflow-y-auto"></div>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <h4 class="font-bold mb-2 text-sm">월간</h4>
+                    <div id="stats-monthly" class="text-xs text-gray-600 space-y-1 max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-bold mb-2 text-sm flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i>접속 로그</h4>
+                <div id="stats-log" class="h-64 overflow-y-auto text-xs mt-2 space-y-1 border rounded-lg p-2 bg-gray-50"></div>
+            </div>
+        </div>`;
+
+        const summary = container.querySelector('#stats-summary');
+        const dailyEl = container.querySelector('#stats-daily');
+        const weeklyEl = container.querySelector('#stats-weekly');
+        const monthlyEl = container.querySelector('#stats-monthly');
+        const logEl = container.querySelector('#stats-log');
+
+        const renderAgg = (list, target) => {
+            if(!target) return;
+            if(!list || list.length === 0) {
+                target.innerHTML = '<div class="text-gray-400">데이터 없음</div>';
+                return;
+            }
+            target.innerHTML = list.map(item => `<div class="flex justify-between"><span>${item.key}</span><span class="font-bold text-gray-800">${item.count}</span></div>`).join('');
+        };
+
+        const renderLog = (entries) => {
+            if(!logEl) return;
+            if(!entries || entries.length === 0) {
+                logEl.innerHTML = '<div class="text-center text-gray-400 py-6">로그가 없습니다.</div>';
+                return;
+            }
+            const rows = entries.slice().reverse().map(e => {
+                const ts = e.timestamp || e.ts || e.date;
+                const dt = ts ? new Date(ts) : null;
+                const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                return `<div class="border-b last:border-0 pb-1">
+                    <div class="flex justify-between"><span>${formatted}</span><span class="text-gray-600">${e.device || '-'}</span></div>
+                    <div class="text-gray-500">IP: ${e.ip || '-'}</div>
+                </div>`;
+            }).join('');
+            logEl.innerHTML = rows;
+        };
+
+        const renderData = (payload) => {
+            if(summary) summary.textContent = `총 방문: ${payload.entries.length}`;
+            renderAgg(payload.daily, dailyEl);
+            renderAgg(payload.weekly, weeklyEl);
+            renderAgg(payload.monthly, monthlyEl);
+            renderLog(payload.entries);
+            if(window.lucide) lucide.createIcons();
+        };
+
+        fetch('/.netlify/functions/stats')
+            .then(res => res.ok ? res.json() : Promise.reject(new Error('fail')))
+            .then(renderData)
+            .catch(err => {
+                console.warn('Stats load failed', err);
+                const fallback = DataStore.get().stats || [];
+                renderData({
+                    entries: fallback,
+                    daily: [],
+                    weekly: [],
+                    monthly: []
+                });
+            });
     },
     renderSettings(container, data) {
         container.innerHTML = `
