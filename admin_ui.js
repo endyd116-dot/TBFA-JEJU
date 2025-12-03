@@ -351,6 +351,8 @@ export const AdminUI = {
                                     <img id="flow-hero-thumb" src="${sanitize(data.hero.image || '')}" class="w-full h-full object-cover">
                                 </div>
                                 <input id="flow-hero-image" value="${sanitize(data.hero.image || '')}" class="w-full border p-2 rounded text-sm" placeholder="메인 이미지 URL" oninput="window.updateHeroThumb()">
+                                <label class="text-[11px] text-gray-500">이미지 업로드</label>
+                                <input type="file" id="flow-hero-upload" accept="image/*" class="w-full text-xs">
                             </div>
                         </div>
                     </div>
@@ -375,6 +377,8 @@ export const AdminUI = {
                                                     <img id="flow-story-thumb-${i}" src="${sanitize(s.image || '')}" class="w-full h-full object-cover">
                                                 </div>
                                                 <input id="flow-story-img-${i}" value="${sanitize(s.image || '')}" class="w-full border p-2 rounded text-xs mt-2" placeholder="이미지 URL" oninput="window.updateStoryThumb(${i})">
+                                                <label class="text-[11px] text-gray-500 block mt-1">이미지 업로드</label>
+                                                <input type="file" id="flow-story-upload-${i}" accept="image/*" class="w-full text-[11px]">
                                             </div>
                                             <div class="md:col-span-4 grid md:grid-cols-2 gap-2">
                                                 <div class="md:col-span-2">
@@ -479,7 +483,12 @@ export const AdminUI = {
                                             </div>
                                             <div class="md:col-span-4 grid md:grid-cols-2 gap-2">
                                                 <div><label class="text-[11px] text-gray-500">제목</label><input id="flow-poster-title-${i}" value="${sanitize(p.title)}" class="w-full border p-2 rounded"></div>
-                                                <div><label class="text-[11px] text-gray-500">이미지 URL</label><input id="flow-poster-url-${i}" value="${sanitize(p.url)}" class="w-full border p-2 rounded" oninput="window.updatePosterThumb(${i})"></div>
+                                                <div>
+                                                    <label class="text-[11px] text-gray-500">이미지 URL</label>
+                                                    <input id="flow-poster-url-${i}" value="${sanitize(p.url)}" class="w-full border p-2 rounded" oninput="window.updatePosterThumb(${i})">
+                                                    <label class="text-[11px] text-gray-500 block mt-1">이미지 업로드</label>
+                                                    <input type="file" id="flow-poster-upload-${i}" accept="image/*" class="w-full text-[11px]">
+                                                </div>
                                                 <div><label class="text-[11px] text-gray-500">QR 링크</label><input id="flow-poster-link-${i}" value="${sanitize(p.link || '')}" class="w-full border p-2 rounded"></div>
                                                 <div class="flex items-center gap-2">
                                                     <img id="flow-poster-qr-${i}" src="${p.qr ? sanitize(p.qr) : ''}" class="w-12 h-12 border rounded bg-white object-contain">
@@ -750,6 +759,72 @@ export const AdminUI = {
             DataStore.save(data);
             this.renderFlowMgr(container, data);
         };
+
+        // 타이틀 이미지 업로드 → data URL로 미리보기 및 입력란 동기화
+        const heroUpload = document.getElementById('flow-hero-upload');
+        if(heroUpload) {
+            heroUpload.onchange = (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result || '';
+                    const input = document.getElementById('flow-hero-image');
+                    const img = document.getElementById('flow-hero-thumb');
+                    if(input) input.value = dataUrl;
+                    if(img) img.src = dataUrl;
+                    data.hero.image = dataUrl;
+                    DataStore.save(data);
+                    showAdminToast('이미지를 불러왔습니다. 저장 버튼을 눌러 최종 저장하세요.');
+                };
+                reader.readAsDataURL(file);
+            };
+        }
+
+        // 스토리 카드 이미지 업로드 → data URL 반영
+        (data.storyBlocks || []).forEach((_, i) => {
+            const upload = document.getElementById(`flow-story-upload-${i}`);
+            if(!upload) return;
+            upload.onchange = (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result || '';
+                    const input = document.getElementById(`flow-story-img-${i}`);
+                    const img = document.getElementById(`flow-story-thumb-${i}`);
+                    if(input) input.value = dataUrl;
+                    if(img) img.src = dataUrl;
+                    if(!data.storyBlocks) data.storyBlocks = [];
+                    if(data.storyBlocks[i]) data.storyBlocks[i].image = dataUrl;
+                    DataStore.save(data);
+                    showAdminToast('스토리 이미지가 불러와졌습니다. 저장 버튼을 눌러 최종 반영하세요.');
+                };
+                reader.readAsDataURL(file);
+            };
+        });
+
+        // 포스터 이미지 업로드 → data URL 반영
+        data.posters.forEach((_, i) => {
+            const upload = document.getElementById(`flow-poster-upload-${i}`);
+            if(!upload) return;
+            upload.onchange = (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result || '';
+                    const input = document.getElementById(`flow-poster-url-${i}`);
+                    const img = document.getElementById(`flow-poster-thumb-${i}`);
+                    if(input) input.value = dataUrl;
+                    if(img) img.src = dataUrl;
+                    if(data.posters[i]) data.posters[i].url = dataUrl;
+                    DataStore.save(data);
+                    showAdminToast('포스터 이미지가 불러와졌습니다. 저장 버튼을 눌러 최종 반영하세요.');
+                };
+                reader.readAsDataURL(file);
+            };
+        });
 
         window.delMission = (i) => {
             if(!data.promises) return;
