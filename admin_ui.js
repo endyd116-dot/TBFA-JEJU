@@ -224,11 +224,21 @@ export const AdminUI = {
     renderResourcesMgr(container, data) {
         container.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
-                <h3 class="font-bold text-lg">자료 패키지 편집</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-lg">자료 패키지 편집</h3>
+                    <button id="add-resource" class="border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-gray-50 flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> 추가</button>
+                </div>
                 <p class="text-sm text-gray-500">각 자료의 제목과 내용을 HTML 형식으로 편집할 수 있습니다. (경고: 올바르지 않은 HTML은 화면 깨짐을 유발할 수 있습니다.)</p>
                 <div class="space-y-6">
                     ${data.resources.map((r, i) => `
                         <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-500">자료 #${i+1}</span>
+                                <div class="flex gap-2">
+                                    <button class="border px-2 py-1 rounded text-xs" onclick="window.moveResource(${i}, -1)">▲</button>
+                                    <button class="border px-2 py-1 rounded text-xs" onclick="window.moveResource(${i}, 1)">▼</button>
+                                </div>
+                            </div>
                             <div class="flex gap-4 mb-2">
                                 <div class="flex-1">
                                     <label class="block text-xs text-gray-500 mb-1">제목</label>
@@ -259,6 +269,24 @@ export const AdminUI = {
             data.resources[i].content = content; // Saving raw HTML as trusted admin input
             DataStore.save(data);
             showToast('자료 내용이 저장되었습니다.');
+        };
+        window.moveResource = (i, dir) => {
+            const next = i + dir;
+            if(next < 0 || next >= data.resources.length) return;
+            [data.resources[i], data.resources[next]] = [data.resources[next], data.resources[i]];
+            DataStore.save(data);
+            this.renderResourcesMgr(container, data);
+        };
+        const addBtn = document.getElementById('add-resource');
+        if(addBtn) addBtn.onclick = () => {
+            data.resources.push({
+                id: `res-${Date.now()}`,
+                title: '새 자료',
+                type: 'CUSTOM',
+                content: '<p>내용을 입력하세요.</p>'
+            });
+            DataStore.save(data);
+            this.renderResourcesMgr(container, data);
         };
     },
     renderFlowMgr(container, data) {
