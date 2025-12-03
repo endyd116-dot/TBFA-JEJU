@@ -480,10 +480,7 @@ function setupEventListeners(data) {
                             <span>${sanitize(l.label)}</span>
                         </button>`;
                     }
-                    return `<button class="${base} border border-gray-200 text-gray-700 hover:bg-gray-50 justify-between" onclick="window.open('${l.url}','_blank','noopener')">
-                        <span>${sanitize(l.label)}</span>
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                    </button>`;
+                    return '';
                 })()}
             `).join('');
         }
