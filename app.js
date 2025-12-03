@@ -467,14 +467,24 @@ function setupEventListeners(data) {
         const shareBtn = document.getElementById('poster-share-btn');
         const copyBtn = document.getElementById('poster-copy-btn');
         const linkList = document.getElementById('poster-share-links');
+        const kakaoBtn = document.getElementById('poster-kakao-share-btn');
 
         if (linkList) {
             const links = (DataStore.get().settings?.shareLinks || []).filter(l=>l.url);
             linkList.innerHTML = links.map(l => `
-                <button class="w-full border border-gray-200 text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-50 flex items-center justify-between px-3" onclick="window.open('${l.url}','_blank','noopener')">
-                    <span>${sanitize(l.label)}</span>
-                    <i data-lucide="external-link" class="w-4 h-4"></i>
-                </button>
+                ${(function(){
+                    const isNaver = /네이버/i.test(l.label);
+                    const base = 'w-full font-bold py-2.5 rounded-lg flex items-center px-3';
+                    if(isNaver) {
+                        return `<button class="${base} border border-[#03C75A] text-[#03C75A] justify-center hover:bg-[#03C75A] hover:text-white" onclick="window.open('${l.url}','_blank','noopener')">
+                            <span>${sanitize(l.label)}</span>
+                        </button>`;
+                    }
+                    return `<button class="${base} border border-gray-200 text-gray-700 hover:bg-gray-50 justify-between" onclick="window.open('${l.url}','_blank','noopener')">
+                        <span>${sanitize(l.label)}</span>
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </button>`;
+                })()}
             `).join('');
         }
 
@@ -496,6 +506,10 @@ function setupEventListeners(data) {
             } else {
                 showToast('공유 링크: ' + targetLink);
             }
+        };
+        if (kakaoBtn) kakaoBtn.onclick = () => {
+            const kakaoUrl = `https://accounts.kakao.com/login/?continue=${encodeURIComponent('https://sharer.kakao.com/picker/link?app_key=3e6ddd834b023f24221217e370daed18&short_key=0231c9c7-2aa6-49b2-af60-c845721e70f1')}`;
+            window.open(kakaoUrl, '_blank', 'width=600,height=700');
         };
         
         modal.classList.remove('hidden');

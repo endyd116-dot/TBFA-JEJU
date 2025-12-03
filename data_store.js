@@ -88,7 +88,6 @@ export const DataStore = {
                 sectionOrder: ['hero','story','promises','plan','resources','posters','community','sign','donate'],
                 hiddenSections: [],
                 shareLinks: [
-                    { label: "카카오톡 채널", url: "https://pf.kakao.com" },
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],
                 petitionFormUrl: "",
