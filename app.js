@@ -573,7 +573,7 @@ function renderStories() {
                 <h4 class="text-2xl font-bold font-serif text-gray-900">${sanitize(b.title)}</h4>
                 <p class="text-gray-600 leading-relaxed">${sanitize(b.content)}</p>
             </div>
-            <div class="bg-gray-100 rounded-2xl h-80 overflow-hidden shadow-lg ${b.position === 'left' ? 'order-1 md:order-1' : ''}">
+            <div class="rounded-2xl h-80 overflow-hidden shadow-lg ${b.position === 'left' ? 'order-1 md:order-1' : ''}" style="background:${sanitize(b.bg || '#f3f4f6')}">
                  <img src="${sanitize(b.image || '')}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
             </div>
         </div>

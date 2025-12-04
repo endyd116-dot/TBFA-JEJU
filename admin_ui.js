@@ -237,6 +237,7 @@ export const AdminUI = {
                                 <div class="flex gap-2">
                                     <button class="border px-2 py-1 rounded text-xs" onclick="window.moveResource(${i}, -1)">▲</button>
                                     <button class="border px-2 py-1 rounded text-xs" onclick="window.moveResource(${i}, 1)">▼</button>
+                                    <button class="text-red-500 border border-red-200 px-2 py-1 rounded text-xs" onclick="window.delResource(${i})">삭제</button>
                                 </div>
                             </div>
                             <div class="flex gap-4 mb-2">
@@ -276,6 +277,13 @@ export const AdminUI = {
             [data.resources[i], data.resources[next]] = [data.resources[next], data.resources[i]];
             DataStore.save(data);
             this.renderResourcesMgr(container, data);
+        };
+        window.delResource = (i) => {
+            if(confirm('자료를 삭제하시겠습니까?')) {
+                data.resources.splice(i,1);
+                DataStore.save(data);
+                this.renderResourcesMgr(container, data);
+            }
         };
         const addBtn = document.getElementById('add-resource');
         if(addBtn) addBtn.onclick = () => {
@@ -395,6 +403,10 @@ export const AdminUI = {
                                                         <option value="right" ${s.position === 'right' ? 'selected' : ''}>이미지 오른쪽</option>
                                                         <option value="left" ${s.position === 'left' ? 'selected' : ''}>이미지 왼쪽</option>
                                                     </select>
+                                                </div>
+                                                <div>
+                                                    <label class="text-[11px] text-gray-500">배경 색상</label>
+                                                    <input type="color" id="flow-story-bg-${i}" value="${sanitize(s.bg || '#f3f4f6')}" class="w-full border p-2 rounded text-sm">
                                                 </div>
                                                 <div class="flex justify-end md:col-span-2 gap-2">
                                                     <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.moveStoryBlock(${i}, -1)">위로</button>
@@ -775,7 +787,7 @@ export const AdminUI = {
         if(addStoryBtn) addStoryBtn.onclick = () => {
             syncStoryInputs();
             data.storyBlocks = data.storyBlocks || [];
-            data.storyBlocks.push({ title:'새 이야기', content:'내용을 입력하세요', image:'', position:'right' });
+            data.storyBlocks.push({ title:'새 이야기', content:'내용을 입력하세요', image:'', position:'right', bg:'#f3f4f6' });
             DataStore.save(data);
             this.renderFlowMgr(container, data);
         };
@@ -979,7 +991,8 @@ export const AdminUI = {
                 title: document.getElementById(`flow-story-title-${i}`)?.value || '',
                 content: document.getElementById(`flow-story-content-${i}`)?.value || '',
                 image: document.getElementById(`flow-story-img-${i}`)?.value || '',
-                position: document.getElementById(`flow-story-pos-${i}`)?.value || 'right'
+                position: document.getElementById(`flow-story-pos-${i}`)?.value || 'right',
+                bg: document.getElementById(`flow-story-bg-${i}`)?.value || s.bg || '#f3f4f6'
             }));
 
             data.promises = (data.promises || []).map((m, i) => ({
@@ -1163,7 +1176,8 @@ th { background: #f3f4f6; text-align: left; }
                 title: document.getElementById(`flow-story-title-${i}`)?.value || s.title,
                 content: document.getElementById(`flow-story-content-${i}`)?.value || s.content,
                 image: document.getElementById(`flow-story-img-${i}`)?.value || s.image,
-                position: document.getElementById(`flow-story-pos-${i}`)?.value || s.position || 'right'
+                position: document.getElementById(`flow-story-pos-${i}`)?.value || s.position || 'right',
+                bg: document.getElementById(`flow-story-bg-${i}`)?.value || s.bg || '#f3f4f6'
             }));
         };
 

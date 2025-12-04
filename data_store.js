@@ -56,19 +56,22 @@ export const DataStore = {
                     title: "20년의 헌신, 그리고 멈춰버린 시간",
                     content: `현승준 선생님은 제주대학교 사범대를 졸업하고 약 20년간 교단에 섰습니다. 밤낮없이 학생들과 소통하고 학부모들과의 상담을 이어가던 열정적인 교육자였습니다.<br><br>"한 아이도 포기하지 않겠다"던 교육 철학으로 2025년 3학년 부장을 맡아 학교에 나오지 않는 제자들을 끝까지 바른 길로 인도하려 애썼습니다. 하지만 그토록 사랑했던 교정은 그가 마지막 숨을 거둔 장소가 되고 말았습니다.`,
                     image: "https://r2.flowith.net/files/jpeg/YRBIR-teacher_hyun_seung_jun_family_support_campaign_poster_index_1@1024x1024.jpeg",
-                    position: "right"
+                    position: "right",
+                    bg: "#f3f4f6"
                 },
                 {
                     title: "멈추지 않았던 알림음과 놓쳐버린 골든타임",
                     content: `2025년 3월, 생활지도 과정에서 시작된 악성 민원은 밤낮을 가리지 않았습니다. 지속적인 인격 모독과 결정적인 악성 문자는 20년 베테랑 교사의 삶을 무너뜨렸습니다.<br><br>2025.05.20 17:04 보호자로부터 결정적인 악성 문자 수신<br>2025.05.22 00:46 학교 창고에서 숨진 채 발견 (골든타임 상실)`,
                     image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1000&auto=format&fit=crop",
-                    position: "left"
+                    position: "left",
+                    bg: "#f3f4f6"
                 },
                 {
                     title: `"아빠의 명예라도 지켜주세요"`,
                     content: `남겨진 아내와 어린 두 자녀의 시간은 5월 22일에 멈춰있습니다. 아이들은 엄마마저 사라질까 불안에 떨고 있으며, 가장의 부재로 인해 가계 소득은 전무한 상태입니다.<br><br>사건 발생 5개월이 지났음에도 교육청의 지원은 없었습니다. 유가족은 경제적 빈곤과 트라우마라는 이중고 속에서 "가해자 없는 부실 조사"에 맞서 싸우고 있습니다.`,
                     image: "https://r2.flowith.net/files/jpeg/5QNVJ-korean_family_grief_scene_index_0@1024x1024.jpeg",
-                    position: "right"
+                    position: "right",
+                    bg: "#f3f4f6"
                 }
             ],
             promises: [
