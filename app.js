@@ -578,21 +578,28 @@ function setupBackgroundAudio(url) {
         }), '*');
     };
 
-    const playAudio = async () => {
+    const playAudio = async (forceMuted = false) => {
         if (bgAudioType === 'youtube') {
             sendYT('playVideo');
+            if (forceMuted) sendYT('mute');
+            else sendYT('unMute');
             isAudioPlaying = true;
             updateIcon();
-            return;
+            return true;
         }
+        if (forceMuted) bgAudio.muted = true;
         try {
             await bgAudio.play();
+            if (!forceMuted) bgAudio.muted = false;
             isAudioPlaying = true;
+            updateIcon();
+            return true;
         } catch (err) {
             console.warn('Autoplay blocked or failed', err);
             isAudioPlaying = false;
+            updateIcon();
+            return false;
         }
-        updateIcon();
     };
 
     const pauseAudio = () => {
@@ -630,13 +637,19 @@ function setupBackgroundAudio(url) {
             document.body.appendChild(ytIframe);
         }
         ytIframe.src = src;
-        // Give iframe a moment to load before sending play
-        setTimeout(() => { playAudio(); }, 500);
+        // Give iframe a moment to load before sending play (muted to pass autoplay)
+        setTimeout(() => {
+            playAudio(true).then(() => {
+                setTimeout(() => { playAudio(false); }, 400);
+            });
+        }, 500);
     } else {
         bgAudio.src = url;
-        // Try autoplay on load, and also hook a first user interaction to start playback if blocked
-        playAudio();
-        const kickstart = () => { playAudio(); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
+        // Try autoplay on load (muted first), and also hook a first user interaction to start playback if blocked
+        playAudio(true).then((ok) => {
+            if (ok) setTimeout(() => { bgAudio.muted = false; }, 400);
+        });
+        const kickstart = () => { playAudio(false); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
         window.addEventListener('pointerdown', kickstart, { once: true });
         window.addEventListener('keydown', kickstart, { once: true });
     }
