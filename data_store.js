@@ -97,7 +97,8 @@ export const DataStore = {
                 petitionFormUrl: "",
                 donateMainUrl: "",
                 donateKakaoUrl: "https://qr.kakaopay.com/Ej8e5jZ",
-                donateHappyUrl: "https://happybean.naver.com"
+                donateHappyUrl: "https://happybean.naver.com",
+                donateImage: ""
             },
             flowTexts: {
                 storyTitle: "우리가 기억해야 할 이야기",

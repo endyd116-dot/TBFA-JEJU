@@ -61,6 +61,8 @@ function renderContent(data) {
     document.getElementById('progress-percent').textContent = percent;
     document.getElementById('progress-bar').style.width = `${percent}%`;
     document.getElementById('total-goal-chart-label').textContent = formatCurrency(data.settings.targetAmount);
+    const donateSideImg = document.getElementById('donate-side-image');
+    if(donateSideImg) donateSideImg.src = data.settings.donateImage || donateSideImg.dataset.fallback || '';
 
 
     document.getElementById('acc-owner').textContent = data.settings.accountOwner;
@@ -556,7 +558,7 @@ function setupBackgroundAudio(url) {
         bgAudio.loop = true;
     }
     bgAudioType = isYoutube ? 'youtube' : 'audio';
-    isAudioPlaying = false; // 초기 상태: 재생 안 함 (음소거 아이콘)
+    isAudioPlaying = true; // 초기 상태: 재생 시도 (볼륨 아이콘)
 
     const updateIcon = () => {
         if (iconEl) {
@@ -611,7 +613,7 @@ function setupBackgroundAudio(url) {
         else playAudio();
     };
 
-    updateIcon(); // 시작 아이콘 표시
+    updateIcon(); // 시작 아이콘 표시 (볼륨)
 
     if (isYoutube) {
         const videoId = ytMatch[1];

@@ -357,51 +357,62 @@
     <!-- Donation Section -->
     <section id="donate" class="py-32 bg-primary relative overflow-hidden text-white">
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
-            <span class="inline-block py-1 px-4 rounded-full bg-white/20 backdrop-blur text-sm font-bold mb-8 border border-white/30">Donation Campaign</span>
-            <h2 id="donate-title-text" class="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight">당신의 손길이<br>가족의 내일이 됩니다</h2>
-            
-            <div class="bg-white text-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg mx-auto transform hover:-translate-y-2 transition-all duration-500">
-                <div class="mb-10">
-                    <div class="flex justify-between items-end mb-2">
-                        <span class="text-sm text-gray-500 font-bold uppercase">Status</span>
-                        <span class="text-sm text-primary font-bold"><span id="progress-percent">0</span>% 달성</span>
-                    </div>
-                    <div class="flex items-baseline gap-2 mb-4 justify-center flex-wrap">
-                        <span class="text-4xl md:text-5xl font-bold text-gray-900 font-mono tracking-tight" id="current-amount-display">0</span>
-                        <span class="text-gray-400 text-lg">/ <span id="goal-amount-text">0</span>원</span>
-                    </div>
-                    <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                        <div id="progress-bar" class="bg-primary h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
-                    </div>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="flex items-center justify-center gap-3 mb-2">
-                        <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl mb-8 flex items-center justify-center gap-3 animate-pulse">
-                            <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
-                        </button>
-                    </div>
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-10 items-center">
+                <div class="text-center lg:text-left">
+                    <span class="inline-block py-1 px-4 rounded-full bg-white/20 backdrop-blur text-sm font-bold mb-8 border border-white/30">Donation Campaign</span>
+                    <h2 id="donate-title-text" class="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight">당신의 손길이<br>가족의 내일이 됩니다</h2>
+                    
+                    <div class="bg-white text-gray-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl max-w-lg lg:max-w-xl mx-auto lg:mx-0 transform hover:-translate-y-2 transition-all duration-500">
+                        <div class="mb-10">
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-sm text-gray-500 font-bold uppercase">Status</span>
+                                <span class="text-sm text-primary font-bold"><span id="progress-percent">0</span>% 달성</span>
+                            </div>
+                            <div class="flex items-baseline gap-2 mb-4 justify-center lg:justify-start flex-wrap">
+                                <span class="text-4xl md:text-5xl font-bold text-gray-900 font-mono tracking-tight" id="current-amount-display">0</span>
+                                <span class="text-gray-400 text-lg">/ <span id="goal-amount-text">0</span>원</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                                <div id="progress-bar" class="bg-primary h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-center gap-3 mb-2">
+                                <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl mb-8 flex items-center justify-center gap-3 animate-pulse">
+                                    <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
+                                </button>
+                            </div>
 
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <button onclick="window.showPaymentGuide('kakaopay')" class="bg-[#FEE500] text-[#3C1E1E] py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">카카오페이</button>
-                        <button onclick="window.showPaymentGuide('happybean')" class="bg-[#00C73C] text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">해피빈</button>
-                    </div>
-                    <div class="group relative bg-blue-50 p-5 rounded-2xl border-2 border-transparent hover:border-primary transition-all cursor-pointer text-left" id="account-info-box">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-xs text-gray-500 font-medium block mb-1">계좌이체 (예금주: <span id="acc-owner"></span>)</span>
-                                <div class="font-mono font-bold text-lg md:text-xl text-gray-800 tracking-tight block group-hover:text-primary transition-colors">
-                                    <span id="acc-bank" class="mr-1"></span> <span id="acc-number"></span>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <button onclick="window.showPaymentGuide('kakaopay')" class="bg-[#FEE500] text-[#3C1E1E] py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">카카오페이</button>
+                                <button onclick="window.showPaymentGuide('happybean')" class="bg-[#00C73C] text-white py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">해피빈</button>
+                            </div>
+                            <div class="group relative bg-blue-50 p-5 rounded-2xl border-2 border-transparent hover:border-primary transition-all cursor-pointer text-left" id="account-info-box">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-xs text-gray-500 font-medium block mb-1">계좌이체 (예금주: <span id="acc-owner"></span>)</span>
+                                        <div class="font-mono font-bold text-lg md:text-xl text-gray-800 tracking-tight block group-hover:text-primary transition-colors">
+                                            <span id="acc-bank" class="mr-1"></span> <span id="acc-number"></span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white p-2 rounded-full shadow-sm text-gray-400"><i data-lucide="copy" class="w-5 h-5"></i></div>
                                 </div>
                             </div>
-                            <div class="bg-white p-2 rounded-full shadow-sm text-gray-400"><i data-lucide="copy" class="w-5 h-5"></i></div>
+                             <div class="mt-6 pt-6 border-t border-gray-100">
+                                <h4 class="text-xs font-bold text-gray-400 mb-3 text-center lg:text-left">최근 참여하신 분들</h4>
+                                <div id="donor-ticker" class="h-8 overflow-hidden text-center lg:text-left relative">
+                                    <div class="ticker-content space-y-1 text-sm text-gray-600 font-medium" id="donor-list-display"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                     <div class="mt-6 pt-6 border-t border-gray-100">
-                        <h4 class="text-xs font-bold text-gray-400 mb-3 text-center">최근 참여하신 분들</h4>
-                        <div id="donor-ticker" class="h-8 overflow-hidden text-center relative">
-                            <div class="ticker-content space-y-1 text-sm text-gray-600 font-medium" id="donor-list-display"></div>
+                </div>
+                <div class="hidden lg:block">
+                    <div class="bg-white/10 backdrop-blur rounded-[2.5rem] border border-white/20 p-4 shadow-2xl">
+                        <div class="aspect-[4/5] rounded-2xl overflow-hidden bg-white/20 border border-white/30">
+                            <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover">
                         </div>
                     </div>
                 </div>

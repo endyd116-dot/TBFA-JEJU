@@ -634,6 +634,22 @@ export const AdminUI = {
                                 <label class="text-xs text-gray-500">해피빈 URL</label>
                                 <input id="flow-donate-happy-url" value="${sanitize(data.settings?.donateHappyUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
                             </div>
+                            <div class="md:col-span-2 grid md:grid-cols-2 gap-2 items-center">
+                                <div>
+                                    <label class="text-xs text-gray-500">후원 섹션 이미지 URL</label>
+                                    <input id="flow-donate-image" value="${sanitize(data.settings?.donateImage || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...jpg">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-gray-500 block">이미지 업로드</label>
+                                    <input type="file" id="flow-donate-upload" accept="image/*" class="w-full text-[11px]">
+                                    <p class="text-[11px] text-gray-400 mt-1">파일을 선택하면 자동으로 반영됩니다.</p>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <div class="w-full aspect-[4/3] bg-gray-50 border rounded overflow-hidden flex items-center justify-center">
+                                    <img id="flow-donate-thumb" src="${sanitize(data.settings?.donateImage || '')}" class="w-full h-full object-cover">
+                                </div>
+                            </div>
                         </div>
                         <div class="grid md:grid-cols-3 gap-3">
                             <div>
@@ -923,6 +939,27 @@ export const AdminUI = {
             };
         });
 
+        // 후원 섹션 이미지 업로드 → data URL 반영
+        const donateUpload = document.getElementById('flow-donate-upload');
+        if(donateUpload) {
+            donateUpload.onchange = (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result || '';
+                    const input = document.getElementById('flow-donate-image');
+                    const img = document.getElementById('flow-donate-thumb');
+                    if(input) input.value = dataUrl;
+                    if(img) img.src = dataUrl;
+                    data.settings.donateImage = dataUrl;
+                    DataStore.save(data);
+                    showAdminToast('후원 섹션 이미지가 불러와졌습니다. 저장 버튼을 눌러 최종 반영하세요.');
+                };
+                reader.readAsDataURL(file);
+            };
+        }
+
         // 탄원서 파일 업로드 → data URL로 저장/미리보기 필드 반영
         // 파일 업로드 비활성화: URL 입력만 사용
         const petitionUpload = document.getElementById('flow-petition-upload');
@@ -976,6 +1013,7 @@ export const AdminUI = {
             data.settings.accountBank = getVal('flow-acc-bank', data.settings?.accountBank || '');
             data.settings.accountNumber = getVal('flow-acc-number', data.settings?.accountNumber || '');
             data.settings.musicUrl = getVal('flow-music-url', data.settings?.musicUrl || '');
+            data.settings.donateImage = getVal('flow-donate-image', data.settings?.donateImage || '');
             data.flowTexts = {
                 storyTitle: getVal('flow-story-title', data.flowTexts?.storyTitle || ''),
                 storyDesc: getVal('flow-story-desc', data.flowTexts?.storyDesc || ''),
