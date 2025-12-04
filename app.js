@@ -537,7 +537,7 @@ function setupEventListeners(data) {
 
 function setupBackgroundAudio(url) {
     const toggle = document.getElementById('audio-toggle');
-    const icon = document.getElementById('audio-toggle-icon');
+    const iconBox = document.getElementById('audio-toggle-icon');
     if (!toggle) return;
 
     if (!url) {
@@ -557,11 +557,17 @@ function setupBackgroundAudio(url) {
     }
     bgAudioType = isYoutube ? 'youtube' : 'audio';
 
-    const updateIcon = () => {
-        if (icon) {
-            icon.setAttribute('data-lucide', isAudioPlaying ? 'volume-2' : 'volume-x');
-            if (window.lucide) lucide.createIcons();
+    const setIcon = (name) => {
+        if (!iconBox) return;
+        if (window.lucide && window.lucide.icons && window.lucide.icons[name]) {
+            iconBox.innerHTML = window.lucide.icons[name].toSvg({ width: 16, height: 16, class: 'w-4 h-4' });
+        } else {
+            iconBox.textContent = name === 'volume-2' ? '🔊' : '🔇';
         }
+    };
+
+    const updateIcon = () => {
+        setIcon(isAudioPlaying ? 'volume-2' : 'volume-x');
         toggle.setAttribute('aria-pressed', isAudioPlaying ? 'true' : 'false');
         toggle.classList.remove('hidden');
     };
