@@ -396,7 +396,9 @@ export const AdminUI = {
                                                         <option value="left" ${s.position === 'left' ? 'selected' : ''}>이미지 왼쪽</option>
                                                     </select>
                                                 </div>
-                                                <div class="flex justify-end md:col-span-2">
+                                                <div class="flex justify-end md:col-span-2 gap-2">
+                                                    <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.moveStoryBlock(${i}, -1)">위로</button>
+                                                    <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.moveStoryBlock(${i}, 1)">아래로</button>
                                                     <button class="text-red-500 text-xs" onclick="window.delStoryBlock(${i})">삭제</button>
                                                 </div>
                                             </div>
@@ -763,6 +765,16 @@ export const AdminUI = {
                 DataStore.save(data);
                 this.renderFlowMgr(container, data);
             }
+        };
+
+        window.moveStoryBlock = (i, dir) => {
+            if(!data.storyBlocks) return;
+            const next = i + dir;
+            if(next < 0 || next >= data.storyBlocks.length) return;
+            syncStoryInputs();
+            [data.storyBlocks[i], data.storyBlocks[next]] = [data.storyBlocks[next], data.storyBlocks[i]];
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
         };
 
         const addMissionBtn = document.getElementById('add-mission');
