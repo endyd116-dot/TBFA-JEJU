@@ -372,15 +372,14 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <div class="flex items-center justify-center mb-2">
-                        <button id="audio-toggle" class="hidden bg-white text-gray-800 px-4 py-3 rounded-2xl shadow border border-gray-200 flex items-center gap-2 text-sm font-bold hover:shadow-md transition-all" aria-pressed="true">
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <button id="audio-toggle" class="bg-white text-gray-800 px-4 py-3 rounded-2xl shadow border border-gray-200 flex items-center gap-2 text-sm font-bold hover:shadow-md transition-all" aria-pressed="true">
                             <i id="audio-toggle-icon" data-lucide="volume-2" class="w-5 h-5"></i>
-                            <span>배경음악</span>
+                        </button>
+                        <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl mb-8 flex items-center justify-center gap-3 animate-pulse">
+                            <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
                         </button>
                     </div>
-                    <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl mb-8 flex items-center justify-center gap-3 animate-pulse">
-                        <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
-                    </button>
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <button onclick="window.showPaymentGuide('kakaopay')" class="bg-[#FEE500] text-[#3C1E1E] py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2">카카오페이</button>
