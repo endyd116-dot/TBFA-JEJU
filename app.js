@@ -562,13 +562,11 @@ function setupBackgroundAudio(url) {
     isAudioMuted = true;
     isAudioPlaying = false;
 
-    const iconSvg = (active) => active
-        ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a4 4 0 0 1 0 7"></path><path d="M17.5 6.5a7 7 0 0 1 0 11"></path></svg>'
-        : '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9 2 12l3 3h3l5 4V5l-5 4z"></path><path d="m18 9-6 6"></path><path d="m12 9 6 6"></path></svg>';
-
     const updateIcon = () => {
         if (iconEl) {
-            iconEl.innerHTML = iconSvg(isAudioPlaying && !isAudioMuted);
+            // 스피커 이모지를 단색으로 보이도록 그레이스케일 처리
+            iconEl.textContent = isAudioPlaying && !isAudioMuted ? '🔊' : '🔇';
+            iconEl.style.filter = 'grayscale(1)';
         }
         toggle.setAttribute('aria-pressed', isAudioPlaying ? 'true' : 'false');
         toggle.classList.remove('hidden');

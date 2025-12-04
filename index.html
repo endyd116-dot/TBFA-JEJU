@@ -358,14 +358,14 @@
     <section id="donate" class="py-24 bg-primary relative overflow-hidden text-white">
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         <div class="max-w-7xl mx-auto px-6 relative z-10">
-            <div class="bg-white text-gray-900 rounded-[2.5rem] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="p-7 md:p-10">
+            <div class="bg-white text-gray-900 rounded-[2.5rem] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <div class="p-7 md:p-10 flex flex-col justify-center">
                     <div class="text-center lg:text-left">
-                        <span class="inline-block py-1 px-4 rounded-full bg-primary/10 text-primary text-sm font-bold mb-8 border border-primary/20">Donation Campaign</span>
+                        <span class="inline-block py-1 px-4 rounded-full bg-primary/10 text-primary text-sm font-bold mb-6 border border-primary/20">Donation Campaign</span>
                         <h2 id="donate-title-text" class="font-serif font-bold mb-5 leading-tight text-gray-900" style="font-size:2.75rem;">당신의 손길이<br>가족의 내일이 됩니다</h2>
                     </div>
-                    <div class="bg-gray-50 rounded-2xl p-6 shadow-inner">
-                        <div class="mb-8">
+                    <div class="bg-gray-50 rounded-2xl p-6 shadow-inner flex flex-col justify-between gap-6">
+                        <div>
                             <div class="flex justify-between items-end mb-2">
                                 <span class="text-sm text-gray-500 font-bold uppercase">Status</span>
                                 <span class="text-sm text-primary font-bold"><span id="progress-percent">0</span>% 달성</span>
@@ -380,8 +380,8 @@
                         </div>
                         
                         <div class="space-y-4">
-                            <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-6 rounded-2xl shadow-xl flex items-center justify-center gap-3 animate-pulse">
-                                <i data-lucide="heart" class="w-8 h-8 fill-current"></i> <span>후원하기</span>
+                            <button id="main-donate-cms-btn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xl md:text-2xl font-black py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 animate-pulse">
+                                <i data-lucide="heart" class="w-7 h-7 fill-current"></i> <span>후원하기</span>
                             </button>
 
                             <div class="grid grid-cols-2 gap-4">
@@ -399,7 +399,7 @@
                                     <div class="bg-white p-2 rounded-full shadow-sm text-gray-400"><i data-lucide="copy" class="w-5 h-5"></i></div>
                                 </div>
                             </div>
-                            <div class="mt-6 pt-6 border-t border-gray-200 text-center">
+                            <div class="mt-2 pt-4 border-t border-gray-200 text-center">
                                 <h4 class="text-xs font-bold text-gray-500 mb-3 text-center">최근 참여하신 분들</h4>
                                 <div id="donor-ticker" class="h-8 overflow-hidden text-center relative">
                                     <div class="ticker-content space-y-1 text-sm text-gray-600 font-medium" id="donor-list-display"></div>
@@ -408,7 +408,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-900 h-64 sm:h-72 lg:h-full">
+                <div class="bg-gray-900 h-64 sm:h-80 lg:h-full">
                     <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover">
                 </div>
             </div>
