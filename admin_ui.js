@@ -443,7 +443,9 @@ export const AdminUI = {
                                                 <label class="text-[11px] text-gray-500">설명</label>
                                                 <textarea id="flow-mission-desc-${i}" class="w-full border p-2 rounded h-16">${sanitize(m.desc)}</textarea>
                                             </div>
-                                            <div class="flex justify-end md:col-span-3">
+                                            <div class="flex justify-end md:col-span-3 gap-2">
+                                                <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.moveMission(${i}, -1)">위로</button>
+                                                <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.moveMission(${i}, 1)">아래로</button>
                                                 <button class="text-red-500 text-xs" onclick="window.delMission(${i})">삭제</button>
                                             </div>
                                         </div>
@@ -495,7 +497,11 @@ export const AdminUI = {
                                                 <div class="flex items-center gap-2">
                                                     <img id="flow-poster-qr-${i}" src="${p.qr ? sanitize(p.qr) : ''}" class="w-12 h-12 border rounded bg-white object-contain">
                                                     <button class="px-2 py-1 bg-gray-900 text-white rounded text-xs" onclick="window.genPosterQRFlow(${i})">QR 생성</button>
-                                                    <button class="text-red-500 text-xs ml-auto" onclick="window.delPosterFlow(${i})">삭제</button>
+                                                    <div class="flex gap-2 ml-auto">
+                                                        <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.movePosterFlow(${i}, -1)">위로</button>
+                                                        <button class="text-xs px-2 py-1 border border-gray-300 rounded" onclick="window.movePosterFlow(${i}, 1)">아래로</button>
+                                                        <button class="text-red-500 text-xs" onclick="window.delPosterFlow(${i})">삭제</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -741,6 +747,23 @@ export const AdminUI = {
             }
         };
 
+        window.movePosterFlow = (i, dir) => {
+            if(!data.posters) return;
+            const next = i + dir;
+            if(next < 0 || next >= data.posters.length) return;
+            // sync current poster inputs before swap
+            data.posters = data.posters.map((p, idx) => ({
+                ...p,
+                title: document.getElementById(`flow-poster-title-${idx}`)?.value || p.title,
+                url: document.getElementById(`flow-poster-url-${idx}`)?.value || p.url,
+                link: document.getElementById(`flow-poster-link-${idx}`)?.value || p.link,
+                qr: document.getElementById(`flow-poster-qr-${idx}`)?.src || p.qr
+            }));
+            [data.posters[i], data.posters[next]] = [data.posters[next], data.posters[i]];
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
         const addBtn = document.getElementById('add-poster-flow');
         if(addBtn) addBtn.onclick = () => {
             data.posters.push({ title:'새 포스터', url:'', link: window.location.href, qr:'' });
@@ -782,6 +805,16 @@ export const AdminUI = {
             syncMissionInputs();
             data.promises = data.promises || [];
             data.promises.push({ icon:'star', title:'새 약속', desc:'설명을 입력하세요' });
+            DataStore.save(data);
+            this.renderFlowMgr(container, data);
+        };
+
+        window.moveMission = (i, dir) => {
+            if(!data.promises) return;
+            const next = i + dir;
+            if(next < 0 || next >= data.promises.length) return;
+            syncMissionInputs();
+            [data.promises[i], data.promises[next]] = [data.promises[next], data.promises[i]];
             DataStore.save(data);
             this.renderFlowMgr(container, data);
         };
