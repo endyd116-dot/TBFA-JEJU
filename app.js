@@ -9,7 +9,9 @@ let commentPage = 0;
 let donorTimer = null; // legacy ticker (unused with CSS ticker)
 let signCanvas, signCtx, isSigning = false, signDirty = false;
 let bgAudio = null;
+let bgAudioType = 'audio'; // 'audio' | 'youtube'
 let isAudioPlaying = false;
+let ytIframe = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
@@ -541,16 +543,19 @@ function setupBackgroundAudio(url) {
     if (!url) {
         toggle.classList.add('hidden');
         if (bgAudio) bgAudio.pause();
+        if (ytIframe && ytIframe.parentNode) ytIframe.parentNode.removeChild(ytIframe);
         isAudioPlaying = false;
         return;
     }
 
+    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+    const isYoutube = !!ytMatch;
+
     if (!bgAudio) {
-        bgAudio = new Audio(url);
+        bgAudio = new Audio();
         bgAudio.loop = true;
-    } else {
-        bgAudio.src = url;
     }
+    bgAudioType = isYoutube ? 'youtube' : 'audio';
 
     const updateIcon = () => {
         if (icon) {
@@ -561,7 +566,22 @@ function setupBackgroundAudio(url) {
         toggle.classList.remove('hidden');
     };
 
+    const sendYT = (cmd) => {
+        if (!ytIframe || !ytIframe.contentWindow) return;
+        ytIframe.contentWindow.postMessage(JSON.stringify({
+            event: 'command',
+            func: cmd,
+            args: []
+        }), '*');
+    };
+
     const playAudio = async () => {
+        if (bgAudioType === 'youtube') {
+            sendYT('playVideo');
+            isAudioPlaying = true;
+            updateIcon();
+            return;
+        }
         try {
             await bgAudio.play();
             isAudioPlaying = true;
@@ -573,6 +593,12 @@ function setupBackgroundAudio(url) {
     };
 
     const pauseAudio = () => {
+        if (bgAudioType === 'youtube') {
+            sendYT('pauseVideo');
+            isAudioPlaying = false;
+            updateIcon();
+            return;
+        }
         bgAudio.pause();
         isAudioPlaying = false;
         updateIcon();
@@ -584,8 +610,29 @@ function setupBackgroundAudio(url) {
         else playAudio();
     };
 
-    // Try autoplay on load
-    playAudio();
+    if (isYoutube) {
+        const videoId = ytMatch[1];
+        const src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=0&rel=0&playsinline=1&mute=0`;
+        if (!ytIframe) {
+            ytIframe = document.createElement('iframe');
+            ytIframe.id = 'bg-audio-yt';
+            ytIframe.style.position = 'absolute';
+            ytIframe.style.width = '0';
+            ytIframe.style.height = '0';
+            ytIframe.style.border = '0';
+            ytIframe.style.opacity = '0';
+            ytIframe.setAttribute('allow', 'autoplay');
+            document.body.appendChild(ytIframe);
+        }
+        ytIframe.src = src;
+        isAudioPlaying = true;
+        // Give iframe a moment to load before sending play
+        setTimeout(() => { sendYT('playVideo'); updateIcon(); }, 500);
+    } else {
+        bgAudio.src = url;
+        // Try autoplay on load
+        playAudio();
+    }
 }
 
 function renderCharts(data) {
