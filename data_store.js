@@ -90,6 +90,7 @@ export const DataStore = {
                 accountNumber: "351-1234-5678-90",
                 sectionOrder: ['hero','story','promises','plan','resources','posters','community','sign','donate'],
                 hiddenSections: [],
+                musicUrl: "",
                 shareLinks: [
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],

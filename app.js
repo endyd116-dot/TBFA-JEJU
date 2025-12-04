@@ -8,6 +8,8 @@ let commentTimer = null;
 let commentPage = 0;
 let donorTimer = null; // legacy ticker (unused with CSS ticker)
 let signCanvas, signCtx, isSigning = false, signDirty = false;
+let bgAudio = null;
+let isAudioPlaying = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
@@ -113,6 +115,7 @@ function renderContent(data) {
     applySectionOrder(data.settings?.sectionOrder);
     renderPetitions(data);
     renderSignatures(data);
+    setupBackgroundAudio(data.settings?.musicUrl);
 }
 
 function setupEventListeners(data) {
@@ -528,6 +531,61 @@ function setupEventListeners(data) {
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     };
+}
+
+function setupBackgroundAudio(url) {
+    const toggle = document.getElementById('audio-toggle');
+    const icon = document.getElementById('audio-toggle-icon');
+    if (!toggle) return;
+
+    if (!url) {
+        toggle.classList.add('hidden');
+        if (bgAudio) bgAudio.pause();
+        isAudioPlaying = false;
+        return;
+    }
+
+    if (!bgAudio) {
+        bgAudio = new Audio(url);
+        bgAudio.loop = true;
+    } else {
+        bgAudio.src = url;
+    }
+
+    const updateIcon = () => {
+        if (icon) {
+            icon.setAttribute('data-lucide', isAudioPlaying ? 'volume-2' : 'volume-x');
+            if (window.lucide) lucide.createIcons();
+        }
+        toggle.setAttribute('aria-pressed', isAudioPlaying ? 'true' : 'false');
+        toggle.classList.remove('hidden');
+    };
+
+    const playAudio = async () => {
+        try {
+            await bgAudio.play();
+            isAudioPlaying = true;
+        } catch (err) {
+            console.warn('Autoplay blocked or failed', err);
+            isAudioPlaying = false;
+        }
+        updateIcon();
+    };
+
+    const pauseAudio = () => {
+        bgAudio.pause();
+        isAudioPlaying = false;
+        updateIcon();
+    };
+
+    toggle.onclick = () => {
+        if (!bgAudio) return;
+        if (isAudioPlaying) pauseAudio();
+        else playAudio();
+    };
+
+    // Try autoplay on load
+    playAudio();
 }
 
 function renderCharts(data) {

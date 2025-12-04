@@ -353,6 +353,11 @@ export const AdminUI = {
                             <div class="md:col-span-2 space-y-2">
                                 <input id="edit-hero-title" value="${sanitize(data.hero.title)}" class="w-full border p-3 rounded text-lg font-bold">
                                 <textarea id="edit-hero-sub" class="w-full border p-3 rounded h-20">${sanitize(data.hero.subtitle)}</textarea>
+                                <div>
+                                    <label class="text-xs text-gray-500">배경 음악 URL (mp3 등)</label>
+                                    <input id="flow-music-url" value="${sanitize(data.settings?.musicUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...mp3">
+                                    <p class="text-[11px] text-gray-400 mt-1">URL만 지원합니다. (파일 업로드 미지원)</p>
+                                </div>
                             </div>
                             <div class="space-y-2">
                                 <div class="w-full aspect-square bg-gray-50 border rounded overflow-hidden">
@@ -970,6 +975,7 @@ export const AdminUI = {
             data.settings.accountOwner = getVal('flow-acc-owner', data.settings?.accountOwner || '');
             data.settings.accountBank = getVal('flow-acc-bank', data.settings?.accountBank || '');
             data.settings.accountNumber = getVal('flow-acc-number', data.settings?.accountNumber || '');
+            data.settings.musicUrl = getVal('flow-music-url', data.settings?.musicUrl || '');
             data.flowTexts = {
                 storyTitle: getVal('flow-story-title', data.flowTexts?.storyTitle || ''),
                 storyDesc: getVal('flow-story-desc', data.flowTexts?.storyDesc || ''),
