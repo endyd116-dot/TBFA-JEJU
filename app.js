@@ -12,6 +12,7 @@ let bgAudio = null;
 let bgAudioType = 'audio'; // 'audio' | 'youtube'
 let isAudioPlaying = false;
 let ytIframe = null;
+let isAudioMuted = true;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
@@ -558,11 +559,13 @@ function setupBackgroundAudio(url) {
         bgAudio.loop = true;
     }
     bgAudioType = isYoutube ? 'youtube' : 'audio';
-    isAudioPlaying = true; // 초기 상태: 재생 시도 (볼륨 아이콘)
+    isAudioMuted = true;
+    isAudioPlaying = false;
 
     const updateIcon = () => {
         if (iconEl) {
-            iconEl.setAttribute('data-lucide', isAudioPlaying ? 'volume-2' : 'volume-x');
+            const iconName = !isAudioPlaying || isAudioMuted ? 'volume-x' : 'volume-2';
+            iconEl.setAttribute('data-lucide', iconName);
             if (window.lucide) lucide.createIcons();
         }
         toggle.setAttribute('aria-pressed', isAudioPlaying ? 'true' : 'false');
@@ -579,15 +582,15 @@ function setupBackgroundAudio(url) {
     };
 
     const playAudio = async (forceMuted = false) => {
+        isAudioMuted = forceMuted;
         if (bgAudioType === 'youtube') {
             sendYT('playVideo');
-            if (forceMuted) sendYT('mute');
-            else sendYT('unMute');
+            if (forceMuted) sendYT('mute'); else sendYT('unMute');
             isAudioPlaying = true;
             updateIcon();
             return true;
         }
-        if (forceMuted) bgAudio.muted = true;
+        bgAudio.muted = forceMuted;
         try {
             await bgAudio.play();
             if (!forceMuted) bgAudio.muted = false;
@@ -606,18 +609,25 @@ function setupBackgroundAudio(url) {
         if (bgAudioType === 'youtube') {
             sendYT('pauseVideo');
             isAudioPlaying = false;
+            isAudioMuted = false;
             updateIcon();
             return;
         }
         bgAudio.pause();
         isAudioPlaying = false;
+        isAudioMuted = false;
         updateIcon();
     };
 
     toggle.onclick = () => {
         if (!bgAudio) return;
-        if (isAudioPlaying) pauseAudio();
-        else playAudio();
+        if (isAudioPlaying && isAudioMuted) {
+            playAudio(false);
+        } else if (isAudioPlaying) {
+            pauseAudio();
+        } else {
+            playAudio(true);
+        }
     };
 
     updateIcon(); // 시작 아이콘 표시 (볼륨)
@@ -637,19 +647,17 @@ function setupBackgroundAudio(url) {
             document.body.appendChild(ytIframe);
         }
         ytIframe.src = src;
-        // Give iframe a moment to load before sending play (muted to pass autoplay), then unmute, then retry once more
+        // muted autoplay, then unmute
         setTimeout(() => {
             playAudio(true).then(() => {
                 setTimeout(() => { playAudio(false); }, 400);
-                setTimeout(() => { playAudio(false); }, 900); // second tap 시도
             });
         }, 500);
     } else {
         bgAudio.src = url;
         // Try autoplay on load (muted first), and also hook a first user interaction to start playback if blocked
         playAudio(true).then((ok) => {
-            if (ok) setTimeout(() => { bgAudio.muted = false; }, 400);
-            setTimeout(() => { playAudio(false); }, 900); // second tap 시도
+            if (ok) setTimeout(() => { playAudio(false); }, 400);
         });
         const kickstart = () => { playAudio(false); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
         window.addEventListener('pointerdown', kickstart, { once: true });
