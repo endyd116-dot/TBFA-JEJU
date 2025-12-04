@@ -568,13 +568,15 @@ function renderStories() {
     if(!container) return;
     const blocks = Array.isArray(DataStore.get().storyBlocks) ? DataStore.get().storyBlocks : [];
     container.innerHTML = blocks.map((b, idx) => `
-        <div class="grid md:grid-cols-2 gap-12 items-center ${b.position === 'left' ? 'md:flex-row-reverse' : ''}">
-            <div class="space-y-6 ${b.position === 'left' ? 'order-2 md:order-2' : ''}">
-                <h4 class="text-2xl font-bold font-serif text-gray-900">${sanitize(b.title)}</h4>
-                <p class="text-gray-600 leading-relaxed">${sanitize(b.content)}</p>
-            </div>
-            <div class="rounded-2xl h-80 overflow-hidden shadow-lg ${b.position === 'left' ? 'order-1 md:order-1' : ''}" style="background:${sanitize(b.bg || '#f3f4f6')}">
-                 <img src="${sanitize(b.image || '')}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
+        <div class="rounded-2xl p-6 md:p-8 shadow-lg" style="background:${sanitize(b.bg || '#f3f4f6')}">
+            <div class="grid md:grid-cols-2 gap-12 items-center ${b.position === 'left' ? 'md:flex-row-reverse' : ''}">
+                <div class="space-y-6 ${b.position === 'left' ? 'order-2 md:order-2' : ''}">
+                    <h4 class="text-2xl font-bold font-serif text-gray-900">${sanitize(b.title)}</h4>
+                    <p class="text-gray-700 leading-relaxed">${sanitize(b.content)}</p>
+                </div>
+                <div class="rounded-xl h-80 overflow-hidden ${b.position === 'left' ? 'order-1 md:order-1' : ''}">
+                     <img src="${sanitize(b.image || '')}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
+                </div>
             </div>
         </div>
     `).join('');
