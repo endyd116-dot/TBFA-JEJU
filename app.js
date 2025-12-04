@@ -556,6 +556,7 @@ function setupBackgroundAudio(url) {
         bgAudio.loop = true;
     }
     bgAudioType = isYoutube ? 'youtube' : 'audio';
+    isAudioPlaying = false; // 초기 상태: 재생 안 함 (음소거 아이콘)
 
     const updateIcon = () => {
         if (iconEl) {
@@ -610,6 +611,8 @@ function setupBackgroundAudio(url) {
         else playAudio();
     };
 
+    updateIcon(); // 시작 아이콘 표시
+
     if (isYoutube) {
         const videoId = ytMatch[1];
         const src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=0&rel=0&playsinline=1&mute=0`;
@@ -625,17 +628,16 @@ function setupBackgroundAudio(url) {
             document.body.appendChild(ytIframe);
         }
         ytIframe.src = src;
-        isAudioPlaying = true;
         // Give iframe a moment to load before sending play
-        setTimeout(() => { sendYT('playVideo'); updateIcon(); }, 500);
+        setTimeout(() => { playAudio(); }, 500);
     } else {
         bgAudio.src = url;
-    // Try autoplay on load, and also hook a first user interaction to start playback if blocked
-    playAudio();
-    const kickstart = () => { playAudio(); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
-    window.addEventListener('pointerdown', kickstart, { once: true });
-    window.addEventListener('keydown', kickstart, { once: true });
-}
+        // Try autoplay on load, and also hook a first user interaction to start playback if blocked
+        playAudio();
+        const kickstart = () => { playAudio(); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
+        window.addEventListener('pointerdown', kickstart, { once: true });
+        window.addEventListener('keydown', kickstart, { once: true });
+    }
 }
 
 function renderCharts(data) {
