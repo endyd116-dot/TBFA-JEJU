@@ -509,8 +509,8 @@ export const AdminUI = {
                             <div class="md:col-span-1 space-y-1">
                                 <label class="text-xs text-gray-500">탄원서 양식 다운로드 URL</label>
                                 <input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf">
-                                <label class="text-[11px] text-gray-500 block mt-2">파일 업로드</label>
-                                <input type="file" id="flow-petition-upload" accept=".pdf,.doc,.docx,image/*" class="w-full text-[11px]">
+                                <label class="text-[11px] text-gray-500 block mt-2">파일 업로드 (비활성화됨)</label>
+                                <input type="file" id="flow-petition-upload" class="w-full text-[11px] opacity-60 cursor-not-allowed" disabled>
                             </div>
                         </div>
                         <div class="border-t pt-3">
@@ -862,26 +862,10 @@ export const AdminUI = {
         });
 
         // 탄원서 파일 업로드 → data URL로 저장/미리보기 필드 반영
+        // 파일 업로드 비활성화: URL 입력만 사용
         const petitionUpload = document.getElementById('flow-petition-upload');
         if(petitionUpload) {
-            petitionUpload.onchange = async (e) => {
-                const file = e.target?.files?.[0];
-                if(!file) return;
-                const input = document.getElementById('flow-petition-link');
-                if(input) input.value = '업로드 중...';
-                try {
-                    const url = await uploadAdminFile(file, 'petitions');
-                    if(input) input.value = url;
-                    data.settings = data.settings || {};
-                    data.settings.petitionFormUrl = url;
-                    DataStore.save(data);
-                    showAdminToast('양식 파일을 업로드했습니다. 저장 버튼을 눌러 최종 반영하세요.');
-                } catch (err) {
-                    console.error('Petition upload failed', err);
-                    if(input) input.value = data.settings?.petitionFormUrl || '';
-                    showAdminToast(err?.message || '업로드에 실패했습니다. 다시 시도해주세요.');
-                }
-            };
+            petitionUpload.onchange = () => showAdminToast('현재는 파일 업로드를 지원하지 않습니다. URL만 입력해주세요.');
         }
 
         window.delMission = (i) => {

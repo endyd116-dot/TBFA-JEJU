@@ -1,7 +1,5 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-const { getStore } = require('@netlify/blobs');
+const { Pool } = require('pg');
 
 const respond = (status, body) => ({
     statusCode: status,
@@ -30,38 +28,42 @@ const verifyToken = (authHeader, secret) => {
     return true;
 };
 
-const STORE_NAME = process.env.DATA_STORE_NAME || 'tbfa-data';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
+const DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '';
+const pool = DB_URL ? new Pool({ connectionString: DB_URL }) : null;
+
+const ensureTable = async () => {
+    if (!pool) throw new Error('Database not configured');
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+            id TEXT PRIMARY KEY,
+            data JSONB NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT now()
+        )
+    `);
+};
 
 exports.handler = async (event) => {
-    let store;
-    try {
-        store = getStore({ name: STORE_NAME });
-    } catch (err) {
-        // In local dev without Netlify context, fallback to file storage
-        store = null;
-    }
-    const fallbackPath = path.join(__dirname, 'data.local.json');
+    if (!pool) return respond(500, { error: 'Database not configured' });
 
-    // GET -> return current data or {} if not set
+    try {
+        await ensureTable();
+    } catch (err) {
+        console.error('Table ensure failed', err);
+        return respond(500, { error: 'Failed to prepare storage' });
+    }
+
     if (event.httpMethod === 'GET') {
         try {
-            if (store) {
-                const blob = await store.get('data.json', { type: 'json' });
-                return respond(200, blob || {});
-            }
-            if (fs.existsSync(fallbackPath)) {
-                const raw = fs.readFileSync(fallbackPath, 'utf-8');
-                return respond(200, JSON.parse(raw));
-            }
-            return respond(200, {});
+            const { rows } = await pool.query('SELECT data FROM settings WHERE id = $1', ['main']);
+            const row = rows[0];
+            return respond(200, row ? row.data : {});
         } catch (err) {
             console.error('GET failed', err);
             return respond(500, { error: 'Failed to load data' });
         }
     }
 
-    // POST -> save data (admin only)
     if (event.httpMethod === 'POST') {
         if (!ADMIN_SECRET) return respond(500, { error: 'ADMIN_SECRET not set' });
         if (!verifyToken(event.headers.authorization, ADMIN_SECRET)) {
@@ -76,11 +78,12 @@ exports.handler = async (event) => {
         }
 
         try {
-            if (store) {
-                await store.set('data.json', JSON.stringify(body), { contentType: 'application/json' });
-            } else {
-                fs.writeFileSync(fallbackPath, JSON.stringify(body, null, 2), 'utf-8');
-            }
+            await pool.query(
+                `INSERT INTO settings (id, data, updated_at)
+                 VALUES ($1, $2, now())
+                 ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+                ['main', body]
+            );
             return respond(200, { ok: true });
         } catch (err) {
             console.error('POST failed', err);

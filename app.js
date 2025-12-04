@@ -223,24 +223,7 @@ function setupEventListeners(data) {
         reader.readAsDataURL(file);
     });
 
-    const uploadPetitionFile = async (file, submitterName) => {
-        const dataUrl = await readFileAsDataUrl(file);
-        const payload = {
-            fileName: file.name,
-            contentType: file.type || 'application/octet-stream',
-            data: dataUrl,
-            ownerName: submitterName || 'anonymous'
-        };
-        const res = await fetch('/.netlify/functions/petition-upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('파일 업로드 실패');
-        const json = await res.json();
-        if (!json.url) throw new Error('업로드 URL을 받지 못했습니다.');
-        return { url: json.url, fileName: json.fileName || file.name };
-    };
+    // 파일 업로드는 사용하지 않고, URL/텍스트만 처리합니다.
 
     document.getElementById('petition-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -253,16 +236,8 @@ function setupEventListeners(data) {
 
         let fileUrl = '';
         if(file) {
-            try {
-                const uploaded = await uploadPetitionFile(file, name);
-                fileUrl = uploaded.url;
-                fileName = uploaded.fileName || fileName;
-            }
-            catch (err) {
-                console.warn('파일 업로드 실패', err);
-                showToast('파일 업로드에 실패했습니다. 다시 시도해주세요.');
-                return;
-            }
+            showToast('현재는 파일 업로드를 지원하지 않습니다. URL로만 등록해주세요.');
+            return;
         }
 
         data.petitions.push({
