@@ -637,10 +637,11 @@ function setupBackgroundAudio(url) {
             document.body.appendChild(ytIframe);
         }
         ytIframe.src = src;
-        // Give iframe a moment to load before sending play (muted to pass autoplay)
+        // Give iframe a moment to load before sending play (muted to pass autoplay), then unmute, then retry once more
         setTimeout(() => {
             playAudio(true).then(() => {
                 setTimeout(() => { playAudio(false); }, 400);
+                setTimeout(() => { playAudio(false); }, 900); // second tap 시도
             });
         }, 500);
     } else {
@@ -648,6 +649,7 @@ function setupBackgroundAudio(url) {
         // Try autoplay on load (muted first), and also hook a first user interaction to start playback if blocked
         playAudio(true).then((ok) => {
             if (ok) setTimeout(() => { bgAudio.muted = false; }, 400);
+            setTimeout(() => { playAudio(false); }, 900); // second tap 시도
         });
         const kickstart = () => { playAudio(false); window.removeEventListener('pointerdown', kickstart); window.removeEventListener('keydown', kickstart); };
         window.addEventListener('pointerdown', kickstart, { once: true });
