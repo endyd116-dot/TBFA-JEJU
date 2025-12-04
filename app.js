@@ -564,7 +564,7 @@ function setupBackgroundAudio(url) {
 
     const updateIcon = () => {
         if (iconEl) {
-            const iconName = !isAudioPlaying || isAudioMuted ? 'volume-x' : 'volume-2';
+            const iconName = isAudioPlaying && !isAudioMuted ? 'volume-2' : 'volume-x';
             iconEl.setAttribute('data-lucide', iconName);
             if (window.lucide) lucide.createIcons();
         }
@@ -621,12 +621,10 @@ function setupBackgroundAudio(url) {
 
     toggle.onclick = () => {
         if (!bgAudio) return;
-        if (isAudioPlaying && isAudioMuted) {
-            playAudio(false);
-        } else if (isAudioPlaying) {
+        if (isAudioPlaying) {
             pauseAudio();
         } else {
-            playAudio(true);
+            playAudio(false);
         }
     };
 
