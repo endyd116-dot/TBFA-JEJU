@@ -1361,7 +1361,11 @@ th { background: #f3f4f6; text-align: left; }
                     <div class="border p-4 rounded flex justify-between items-start ${c.approved?'bg-gray-50':'bg-yellow-50 border-yellow-200'}">
                         <div class="flex flex-col gap-1 w-full">
                             <div class="flex justify-between items-center">
-                                <span class="font-bold text-sm text-gray-700">${sanitize(c.author)} <span class="font-normal text-xs text-gray-500">${c.approved ? '(승인됨)' : '(승인 대기)'}</span></span>
+                                <span class="font-bold text-sm text-gray-700">
+                                    ${sanitize(c.realName || c.author || '')}
+                                    ${c.isPrivate ? `<span class="text-[11px] text-gray-500 ml-1">(공개명: ${sanitize(c.author || '익명')})</span>` : ''}
+                                    <span class="font-normal text-xs text-gray-500">${c.approved ? '(승인됨)' : '(승인 대기)'}</span>
+                                </span>
                                 <div class="flex gap-2 shrink-0">
                                     ${!c.approved ? `<button onclick="window.approveMsg(${i})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs transition-colors">승인</button>` : ''}
                                     <button onclick="window.delMsg(${i})" class="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded">삭제</button>
@@ -1469,6 +1473,35 @@ th { background: #f3f4f6; text-align: left; }
             });
     },
     renderSettings(container, data) {
+        const showSettingsToast = (msg) => {
+            let toast = document.getElementById('admin-toast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'admin-toast';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '12000';
+                toast.style.padding = '12px 16px';
+                toast.style.background = '#111827';
+                toast.style.color = 'white';
+                toast.style.borderRadius = '10px';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.pointerEvents = 'none';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+            }, 2000);
+        };
+
         container.innerHTML = `
         <div class="space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
@@ -1510,7 +1543,7 @@ th { background: #f3f4f6; text-align: left; }
             data.settings.accountNumber = document.getElementById('set-acc').value; 
             data.settings.accountOwner = document.getElementById('set-owner').value; 
             DataStore.save(data); 
-            showToast('설정이 저장되었습니다.'); 
+            showSettingsToast('설정이 저장되었습니다.'); 
         };
 
         document.getElementById('backup-data').onclick = () => {
