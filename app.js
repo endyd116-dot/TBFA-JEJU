@@ -562,17 +562,13 @@ function setupBackgroundAudio(url) {
     isAudioMuted = true;
     isAudioPlaying = false;
 
-    const iconSvg = (name) => {
-        if (name === 'volume-2') {
-            return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
-        }
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 9-5 5h-2v-6h2l5-5z"></path><path d="m22 9-6 6"></path><path d="m16 9 6 6"></path></svg>';
-    };
+    const iconSvg = (active) => active
+        ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a4 4 0 0 1 0 7"></path><path d="M17.5 6.5a7 7 0 0 1 0 11"></path></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9 2 12l3 3h3l5 4V5l-5 4z"></path><path d="m18 9-6 6"></path><path d="m12 9 6 6"></path></svg>';
 
     const updateIcon = () => {
         if (iconEl) {
-            const iconName = isAudioPlaying && !isAudioMuted ? 'volume-2' : 'volume-x';
-            iconEl.innerHTML = iconSvg(iconName);
+            iconEl.innerHTML = iconSvg(isAudioPlaying && !isAudioMuted);
         }
         toggle.setAttribute('aria-pressed', isAudioPlaying ? 'true' : 'false');
         toggle.classList.remove('hidden');
