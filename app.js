@@ -621,7 +621,7 @@ function setupBackgroundAudio(url) {
         }
         bgAudio.pause();
         isAudioPlaying = false;
-        isAudioMuted = false;
+        isAudioMuted = true;
         updateIcon();
     };
 
