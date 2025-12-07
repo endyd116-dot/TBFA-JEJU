@@ -43,7 +43,7 @@ function renderContent(data) {
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
     const heroImg = document.getElementById('hero-main-image');
     if(heroImg) {
-        heroImg.src = data.hero.image || heroImg.src;
+        heroImg.src = data.hero.image || heroImg.dataset.fallback || '';
         heroImg.classList.add('loaded');
     }
     

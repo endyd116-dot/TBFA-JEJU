@@ -9,8 +9,8 @@
     <meta property="og:url" content="#">
     <meta property="og:image" content="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop">
     <style>
-        .data-loading .defer-img { visibility: hidden; }
-        .defer-img.loaded { visibility: visible; }
+        .defer-img { opacity: 0; transition: opacity 0.4s ease; }
+        .defer-img.loaded { opacity: 1; }
     </style>
     
     <!-- External Libraries -->
@@ -177,7 +177,7 @@
                 </div>
                 <div class="order-1 lg:order-2 relative animate-fade-in-up delay-100">
                     <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square group bg-gray-100">
-                        <img id="hero-main-image" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="Sorrowful Mother" class="defer-img w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
+                        <img id="hero-main-image" src="" data-fallback="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="메인 이미지" class="defer-img w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
                         <div class="absolute bottom-8 left-8 text-white">
                             <p class="font-serif text-xl italic leading-relaxed">"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."</p>
@@ -413,7 +413,7 @@
                     </div>
                 </div>
                 <div class="bg-gray-900 h-64 sm:h-80 lg:h-full">
-                    <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" class="defer-img w-full h-full object-cover">
+                    <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="" class="defer-img w-full h-full object-cover" alt="후원 이미지">
                 </div>
             </div>
         </div>
