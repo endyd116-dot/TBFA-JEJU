@@ -12,6 +12,18 @@ export const DataStore = {
         return this.init();
     },
     async loadRemote() {
+        const existingLocal = (() => {
+            const raw = localStorage.getItem('tbfa_data');
+            if (!raw) return null;
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.hero && parsed.settings) return parsed;
+            } catch (e) {
+                console.warn('Local data parse failed', e);
+            }
+            return null;
+        })();
+
         try {
             const res = await fetch('/.netlify/functions/data');
             if (!res.ok) throw new Error('remote fetch failed');
@@ -20,10 +32,12 @@ export const DataStore = {
                 localStorage.setItem('tbfa_data', JSON.stringify(remote));
                 return remote;
             }
+            if (existingLocal) return existingLocal;
         } catch (err) {
             console.warn('Remote load failed, using local/default', err);
+            if (existingLocal) return existingLocal;
         }
-        return this.get();
+        return this.init();
     },
     save(data) {
         localStorage.setItem('tbfa_data', JSON.stringify(data));
