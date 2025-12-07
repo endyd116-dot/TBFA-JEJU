@@ -58,7 +58,7 @@ export const AdminUI = {
                                 </div>
                                 <div class="w-32">
                                     <label class="block text-xs text-gray-500 mb-1">타입</label>
-                                    <input type="text" id="sign-res-type-${i}" value="${r.type || ''}" class="w-full border p-2 rounded text-sm bg-gray-100" readonly>
+                                    <input type="text" id="sign-res-type-${i}" value="${sanitize(r.type || '')}" class="w-full border p-2 rounded text-sm">
                                 </div>
                             </div>
                             <div>
@@ -78,8 +78,10 @@ export const AdminUI = {
             if(!data.signResources) data.signResources = [];
             const title = document.getElementById(`sign-res-title-${i}`).value;
             const content = document.getElementById(`sign-res-content-${i}`).value;
+            const type = document.getElementById(`sign-res-type-${i}`).value;
             data.signResources[i].title = title;
             data.signResources[i].content = content;
+            data.signResources[i].type = type;
             DataStore.save(data);
             showToast('서명 자료가 저장되었습니다.');
         };
@@ -330,7 +332,7 @@ export const AdminUI = {
                                 </div>
                                 <div class="w-32">
                                     <label class="block text-xs text-gray-500 mb-1">타입</label>
-                                    <input type="text" id="res-type-${i}" value="${r.type}" class="w-full border p-2 rounded text-sm bg-gray-100" readonly>
+                                    <input type="text" id="res-type-${i}" value="${sanitize(r.type || '')}" class="w-full border p-2 rounded text-sm">
                                 </div>
                             </div>
                             <div>
@@ -349,7 +351,9 @@ export const AdminUI = {
         window.saveResource = (i) => {
             const title = document.getElementById(`res-title-${i}`).value;
             const content = document.getElementById(`res-content-${i}`).value;
+            const type = document.getElementById(`res-type-${i}`).value;
             data.resources[i].title = title;
+            data.resources[i].type = type;
             data.resources[i].content = content; // Saving raw HTML as trusted admin input
             DataStore.save(data);
             showToast('자료 내용이 저장되었습니다.');
