@@ -27,7 +27,6 @@ window.addEventListener('dataUpdated', (e) => {
     const updated = e.detail || DataStore.get();
     renderContent(updated);
     renderCharts(updated);
-    updateMetaTags(updated);
 });
 
 function initApp() {
