@@ -66,7 +66,6 @@ function renderContent(data) {
     document.getElementById('total-goal-chart-label').textContent = formatCurrency(data.settings.targetAmount);
     const donateSideImg = document.getElementById('donate-side-image');
     if(donateSideImg) donateSideImg.src = data.settings.donateImage || donateSideImg.src;
-    updateMetaTags(data);
 
 
     document.getElementById('acc-owner').textContent = data.settings.accountOwner;
