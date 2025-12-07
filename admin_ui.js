@@ -536,6 +536,30 @@ export const AdminUI = {
                                 <input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf">
                                 <label class="text-xs text-gray-500 block mt-2">탄원서 수신 이메일</label>
                                 <input id="flow-petition-email" value="${sanitize(data.settings?.petitionEmail || '')}" class="w-full border p-2 rounded" placeholder="admin@example.com">
+                                <div class="grid md:grid-cols-2 gap-2 mt-2">
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">SMTP HOST</label>
+                                        <input id="flow-smtp-host" value="${sanitize(data.settings?.smtpHost || '')}" class="w-full border p-2 rounded text-sm" placeholder="smtp.naver.com">
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">SMTP PORT</label>
+                                        <input id="flow-smtp-port" value="${sanitize(data.settings?.smtpPort || '')}" class="w-full border p-2 rounded text-sm" placeholder="465 또는 587">
+                                    </div>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">SMTP USER</label>
+                                        <input id="flow-smtp-user" value="${sanitize(data.settings?.smtpUser || '')}" class="w-full border p-2 rounded text-sm" placeholder="id@naver.com">
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">SMTP PASS</label>
+                                        <input id="flow-smtp-pass" value="${sanitize(data.settings?.smtpPass || '')}" type="password" class="w-full border p-2 rounded text-sm" placeholder="앱 비밀번호">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-gray-500">발신 이메일(FROM)</label>
+                                    <input id="flow-from-email" value="${sanitize(data.settings?.fromEmail || '')}" class="w-full border p-2 rounded text-sm" placeholder="id@naver.com">
+                                </div>
                                 <label class="text-[11px] text-gray-500 block mt-2">파일 업로드 (비활성화됨)</label>
                                 <input type="file" id="flow-petition-upload" class="w-full text-[11px] opacity-60 cursor-not-allowed" disabled>
                             </div>
@@ -1009,6 +1033,11 @@ export const AdminUI = {
             data.settings.hiddenSections = Array.from(new Set(data.settings.hiddenSections || []));
             data.settings.petitionFormUrl = getVal('flow-petition-link', data.settings?.petitionFormUrl || '');
             data.settings.petitionEmail = getVal('flow-petition-email', data.settings?.petitionEmail || '');
+            data.settings.smtpHost = getVal('flow-smtp-host', data.settings?.smtpHost || '');
+            data.settings.smtpPort = getVal('flow-smtp-port', data.settings?.smtpPort || '');
+            data.settings.smtpUser = getVal('flow-smtp-user', data.settings?.smtpUser || '');
+            data.settings.smtpPass = getVal('flow-smtp-pass', data.settings?.smtpPass || '');
+            data.settings.fromEmail = getVal('flow-from-email', data.settings?.fromEmail || '');
             data.settings.donateMainUrl = getVal('flow-donate-main-url', data.settings?.donateMainUrl || '');
             data.settings.donateKakaoUrl = getVal('flow-donate-kakao-url', data.settings?.donateKakaoUrl || '');
             data.settings.donateHappyUrl = getVal('flow-donate-happy-url', data.settings?.donateHappyUrl || '');

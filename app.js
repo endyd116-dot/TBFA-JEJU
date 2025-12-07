@@ -250,17 +250,30 @@ function setupEventListeners(data) {
         const fileContent = file ? await readFileAsDataUrl(file) : '';
         // 이메일 전송
         try {
-            await fetch('/.netlify/functions/send-petition-email', {
+            const res = await fetch('/.netlify/functions/send-petition-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     to: recipient,
                     name,
-                    file: file ? { name: file.name, type: file.type, content: fileContent } : {}
+                    file: file ? { name: file.name, type: file.type, content: fileContent } : {},
+                    smtp: {
+                        host: data.settings?.smtpHost || '',
+                        port: data.settings?.smtpPort || '',
+                        user: data.settings?.smtpUser || '',
+                        pass: data.settings?.smtpPass || '',
+                        from: data.settings?.fromEmail || ''
+                    }
                 })
             });
+            const msg = await res.json().catch(() => ({}));
+            if(!msg.ok) {
+                console.warn('메일 전송 안됨', msg);
+                showToast('메일 전송이 설정되지 않았습니다. 관리자 이메일 설정/SMTP를 확인하세요.');
+            }
         } catch (err) {
             console.error('메일 전송 실패', err);
+            showToast('메일 전송에 실패했습니다.');
         }
 
         let fileUrl = '';

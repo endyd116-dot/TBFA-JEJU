@@ -13,24 +13,37 @@ exports.handler = async (event) => {
     to,
     name,
     file = {},
+    smtp = {}
   } = JSON.parse(event.body || '{}');
 
   if (!to) return respond(400, { error: 'Missing recipient email' });
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const from = process.env.FROM_EMAIL || smtpUser;
+  const smtpHost = smtp.host || process.env.SMTP_HOST;
+  const smtpUser = smtp.user || process.env.SMTP_USER;
+  const smtpPass = smtp.pass || process.env.SMTP_PASS;
+  const from = smtp.from || process.env.FROM_EMAIL || smtpUser;
   if (!smtpHost || !smtpUser || !smtpPass) {
-    return respond(500, { error: 'SMTP is not configured' });
+    console.warn('SMTP not configured, skipping email send');
+    return respond(200, { ok: false, skipped: true, reason: 'smtp_not_configured' });
   }
 
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    auth: { user: smtpUser, pass: smtpPass },
-  });
+  const primaryPort = Number(smtp.port || process.env.SMTP_PORT || 465);
+  const fallbackPort = 587;
+
+  const trySend = async (port) => {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port,
+      secure: port === 465, // 465: SSL, 587: STARTTLS
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+    return transporter.sendMail({
+      from,
+      to,
+      subject: `[탄원서 제출] ${name || '무명'}`,
+      text: `${name || '무명'} 님이 탄원서를 제출했습니다.`,
+      attachments,
+    });
+  };
 
   const attachments = [];
   if (file?.content) {
@@ -43,16 +56,16 @@ exports.handler = async (event) => {
   }
 
   try {
-    await transporter.sendMail({
-      from,
-      to,
-      subject: `[탄원서 제출] ${name || '무명'}`,
-      text: `${name || '무명'} 님이 탄원서를 제출했습니다.`,
-      attachments,
-    });
-    return respond(200, { ok: true });
-  } catch (err) {
-    console.error('Send mail failed', err);
-    return respond(500, { error: 'Mail send failed' });
+    await trySend(primaryPort);
+    return respond(200, { ok: true, port: primaryPort });
+  } catch (err1) {
+    console.warn(`Send mail failed on port ${primaryPort}, retrying with ${fallbackPort}`, err1);
+    try {
+      await trySend(fallbackPort);
+      return respond(200, { ok: true, port: fallbackPort });
+    } catch (err2) {
+      console.error('Send mail failed (both ports)', err2);
+      return respond(200, { ok: false, error: 'Mail send failed', detail: err2?.message });
+    }
   }
 };
