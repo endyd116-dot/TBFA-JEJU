@@ -42,7 +42,10 @@ function renderContent(data) {
     document.getElementById('hero-title-text').innerHTML = data.hero.title;
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
     const heroImg = document.getElementById('hero-main-image');
-    if(heroImg) heroImg.src = data.hero.image || heroImg.src;
+    if(heroImg) {
+        heroImg.src = data.hero.image || heroImg.src;
+        heroImg.classList.add('loaded');
+    }
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
@@ -63,7 +66,10 @@ function renderContent(data) {
     document.getElementById('progress-bar').style.width = `${percent}%`;
     document.getElementById('total-goal-chart-label').textContent = formatCurrency(data.settings.targetAmount);
     const donateSideImg = document.getElementById('donate-side-image');
-    if(donateSideImg) donateSideImg.src = data.settings.donateImage || donateSideImg.dataset.fallback || '';
+    if(donateSideImg) {
+        donateSideImg.src = data.settings.donateImage || donateSideImg.dataset.fallback || '';
+        donateSideImg.classList.add('loaded');
+    }
 
 
     document.getElementById('acc-owner').textContent = data.settings.accountOwner;
