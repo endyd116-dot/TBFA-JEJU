@@ -358,6 +358,21 @@ export const AdminUI = {
                                     <input id="flow-music-url" value="${sanitize(data.settings?.musicUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...mp3">
                                     <p class="text-[11px] text-gray-400 mt-1">URL만 지원합니다. (파일 업로드 미지원)</p>
                                 </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">히어로 이미지 위 텍스트</label>
+                                    <textarea id="flow-hero-overlay" class="w-full border p-2 rounded h-16 text-sm" placeholder="겹쳐 보일 문구를 입력하세요.">${sanitize(data.hero.overlay || '')}</textarea>
+                                    <p class="text-[11px] text-gray-400 mt-1">HTML 허용 (예: 줄바꿈 &lt;br&gt;)</p>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">헤더 로고 URL</label>
+                                        <input id="flow-logo-url" value="${sanitize(data.settings?.logoUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...png">
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] text-gray-500 block">로고 업로드</label>
+                                        <input type="file" id="flow-logo-upload" accept="image/*" class="w-full text-[11px]">
+                                    </div>
+                                </div>
                             </div>
                             <div class="space-y-2">
                                 <div class="w-full aspect-square bg-gray-50 border rounded overflow-hidden">
@@ -993,6 +1008,25 @@ export const AdminUI = {
             petitionUpload.onchange = () => showAdminToast('현재는 파일 업로드를 지원하지 않습니다. URL만 입력해주세요.');
         }
 
+        // 로고 업로드 → data URL 반영
+        const logoUpload = document.getElementById('flow-logo-upload');
+        if(logoUpload) {
+            logoUpload.onchange = (e) => {
+                const file = e.target?.files?.[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result || '';
+                    const input = document.getElementById('flow-logo-url');
+                    if(input) input.value = dataUrl;
+                    data.settings.logoUrl = dataUrl;
+                    DataStore.save(data);
+                    showAdminToast('헤더 로고가 업로드되었습니다. 저장 버튼으로 최종 반영하세요.');
+                };
+                reader.readAsDataURL(file);
+            };
+        }
+
         window.delMission = (i) => {
             if(!data.promises) return;
             if(confirm('삭제하시겠습니까?')) {
@@ -1027,6 +1061,7 @@ export const AdminUI = {
             data.hero.title = getVal('edit-hero-title', data.hero.title);
             data.hero.subtitle = getVal('edit-hero-sub', data.hero.subtitle);
             data.hero.image = getVal('flow-hero-image', data.hero.image);
+            data.hero.overlay = getVal('flow-hero-overlay', data.hero.overlay || '');
             data.settings.footerDesc = getVal('edit-footer-desc', data.settings.footerDesc);
             data.settings.footerPhone = getVal('edit-footer-phone', data.settings.footerPhone || '');
             data.settings.footerEmail = getVal('edit-footer-email', data.settings.footerEmail || '');

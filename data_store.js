@@ -63,7 +63,8 @@ export const DataStore = {
             hero: {
                 title: "선생님의 명예 회복과<br>남겨진 가족을 위해",
                 subtitle: "제주중학교 사건 故 현승준 선생님의 억울함을 알리고<br>유가족의 생계와 치유를 지원합니다.",
-                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop"
+                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop",
+                overlay: `"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."`
             },
             storyBlocks: [
                 {
@@ -105,6 +106,7 @@ export const DataStore = {
                 sectionOrder: ['hero','story','promises','plan','resources','posters','community','sign','donate'],
                 hiddenSections: [],
                 musicUrl: "",
+                logoUrl: "",
                 shareLinks: [
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],

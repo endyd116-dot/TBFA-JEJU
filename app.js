@@ -44,6 +44,22 @@ function renderContent(data) {
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
     const heroImg = document.getElementById('hero-main-image');
     if(heroImg) heroImg.src = data.hero.image || heroImg.dataset.fallback || BLANK_IMG;
+    const heroOverlay = document.getElementById('hero-overlay-text');
+    if(heroOverlay) heroOverlay.innerHTML = sanitize(data.hero.overlay || '');
+    const headerLogo = document.getElementById('header-logo');
+    const headerIcon = document.getElementById('header-icon');
+    if (headerLogo) {
+        const logo = data.settings?.logoUrl;
+        if (logo) {
+            headerLogo.src = logo;
+            headerLogo.classList.remove('hidden');
+            if (headerIcon) headerIcon.classList.add('hidden');
+        } else {
+            headerLogo.src = '';
+            headerLogo.classList.add('hidden');
+            if (headerIcon) headerIcon.classList.remove('hidden');
+        }
+    }
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
