@@ -33,6 +33,26 @@ export const AdminUI = {
     renderSignResourcesMgr(container, data) {
         data.signResources = Array.isArray(data.signResources) ? data.signResources : [];
         const list = data.signResources;
+        const toast = (msg) => {
+            let t = document.getElementById('admin-toast');
+            if(!t) {
+                t = document.createElement('div');
+                t.id = 'admin-toast';
+                Object.assign(t.style, {
+                    position:'fixed', top:'20px', right:'20px', zIndex:'12000',
+                    padding:'12px 16px', background:'#111827', color:'white',
+                    borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)',
+                    transition:'opacity 0.3s, transform 0.3s',
+                    opacity:'0', transform:'translateY(-10px)',
+                    pointerEvents:'none'
+                });
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.opacity = '1';
+            t.style.transform = 'translateY(0)';
+            setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(-10px)'; },1500);
+        };
         container.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
                 <div class="flex items-center justify-between">
@@ -83,7 +103,7 @@ export const AdminUI = {
             data.signResources[i].content = content;
             data.signResources[i].type = type;
             DataStore.save(data);
-            showToast('서명 자료가 저장되었습니다.');
+            toast('서명 자료가 저장되었습니다.');
         };
         window.moveSignResource = (i, dir) => {
             if(!data.signResources) data.signResources = [];
@@ -307,6 +327,27 @@ export const AdminUI = {
         bindEvents();
     },
     renderResourcesMgr(container, data) {
+        const toast = (msg) => {
+            let t = document.getElementById('admin-toast');
+            if(!t) {
+                t = document.createElement('div');
+                t.id = 'admin-toast';
+                Object.assign(t.style, {
+                    position:'fixed', top:'20px', right:'20px', zIndex:'12000',
+                    padding:'12px 16px', background:'#111827', color:'white',
+                    borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)',
+                    transition:'opacity 0.3s, transform 0.3s',
+                    opacity:'0', transform:'translateY(-10px)',
+                    pointerEvents:'none'
+                });
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.opacity = '1';
+            t.style.transform = 'translateY(0)';
+            setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(-10px)'; },1500);
+        };
+
         container.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
                 <div class="flex items-center justify-between">
@@ -356,7 +397,7 @@ export const AdminUI = {
             data.resources[i].type = type;
             data.resources[i].content = content; // Saving raw HTML as trusted admin input
             DataStore.save(data);
-            showToast('자료 내용이 저장되었습니다.');
+            toast('자료가 저장되었습니다.');
         };
         window.moveResource = (i, dir) => {
             const next = i + dir;
@@ -1822,18 +1863,26 @@ th { background: #f3f4f6; text-align: left; }
             showSettingsToast('설정이 저장되었습니다.'); 
         };
 
-        document.getElementById('backup-data').onclick = () => {
-            const dataStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([dataStr], {type: "application/json"});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tbfa_data_backup_${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('백업 파일이 다운로드되었습니다.');
+        document.getElementById('backup-data').onclick = async () => {
+            try {
+                const res = await fetch('/.netlify/functions/data');
+                if(!res.ok) throw new Error('백업 데이터 조회 실패');
+                const latest = await res.json();
+                const dataStr = JSON.stringify(latest, null, 2);
+                const blob = new Blob([dataStr], {type: "application/json"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tbfa_data_backup_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showSettingsToast('백업 파일이 다운로드되었습니다.');
+            } catch (err) {
+                console.error(err);
+                showSettingsToast('백업에 실패했습니다.');
+            }
         };
 
         document.getElementById('restore-file').onchange = (e) => {
@@ -1846,14 +1895,15 @@ th { background: #f3f4f6; text-align: left; }
                     if(importedData.hero && importedData.donations) {
                         if(confirm('현재 데이터를 덮어쓰고 복구하시겠습니까?')) {
                             DataStore.save(importedData);
-                            alert('데이터가 복구되었습니다.');
-                            window.location.reload();
+                            window.dispatchEvent(new CustomEvent('dataUpdated', { detail: importedData }));
+                            showSettingsToast('복구가 완료되었습니다.');
                         }
                     } else {
-                        alert('올바르지 않은 데이터 형식입니다.');
+                        showSettingsToast('올바르지 않은 데이터 형식입니다.');
                     }
                 } catch(err) {
-                    alert('오류가 발생했습니다.');
+                    console.error(err);
+                    showSettingsToast('복구 중 오류가 발생했습니다.');
                 }
             };
             reader.readAsText(file);

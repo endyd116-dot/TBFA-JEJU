@@ -51,7 +51,18 @@ export const DataStore = {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(data)
-            }).catch(err => console.warn('Remote save failed', err));
+            }).then(res => {
+                if (res.status === 401) {
+                    sessionStorage.removeItem('tbfa_admin_token');
+                    sessionStorage.removeItem('tbfa_admin_session');
+                    alert('관리자 권한이 만료되었습니다. 다시 로그인해주세요.');
+                    window.location.href = '/';
+                    return;
+                }
+                if (!res.ok) throw new Error('remote save failed');
+            }).catch(err => {
+                console.warn('Remote save failed', err);
+            });
         }
     },
     reset() {
