@@ -124,9 +124,6 @@ function renderContent(data) {
     renderPetitions(data);
     renderSignatures(data);
     setupBackgroundAudio(data.settings?.musicUrl);
-    document.body.classList.remove('data-loading');
-    const loader = document.getElementById('page-loader');
-    if(loader) loader.classList.add('hidden');
 }
 
 function setupEventListeners(data) {
