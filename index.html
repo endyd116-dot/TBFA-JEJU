@@ -7,10 +7,29 @@
     <meta name="description" content="제주중학교 사건 故 현승준 선생님의 명예 회복과 남겨진 유가족(아내와 두 아이)의 생계 및 치유를 위한 공식 후원 페이지입니다.">
     <meta property="og:title" content="제주중학교 사건 유가족을 지켜주세요">
     <meta property="og:url" content="#">
-    <meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAAAAACw=">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop">
     <style>
-        .defer-img { opacity: 0; transition: opacity 0.4s ease; }
-        .defer-img.loaded { opacity: 1; }
+        body.data-loading .dynamic-block { opacity: 0; pointer-events: none; }
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 12000;
+            transition: opacity 0.3s ease;
+        }
+        #page-loader.hidden { opacity: 0; pointer-events: none; }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #0099ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
     
     <!-- External Libraries -->
@@ -61,7 +80,10 @@
         document.addEventListener('DOMContentLoaded', () => { Tracker.init(); });
     </script>
 </head>
-<body class="bg-white text-text-main font-sans antialiased selection:bg-primary selection:text-white overflow-x-hidden">
+<body class="bg-white text-text-main font-sans antialiased selection:bg-primary selection:text-white overflow-x-hidden data-loading">
+    <div id="page-loader">
+        <div class="spinner" aria-label="Loading"></div>
+    </div>
 
     <!-- Toast Notification -->
     <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] pointer-events-none">
@@ -149,7 +171,7 @@
     </header>
 
     <!-- Hero Section -->
-    <section id="hero" class="pt-32 pb-20 px-6 min-h-[85vh] flex items-center relative overflow-hidden bg-gradient-to-b from-primary-light/30 to-white">
+    <section id="hero" class="pt-32 pb-20 px-6 min-h-[85vh] flex items-center relative overflow-hidden bg-gradient-to-b from-primary-light/30 to-white dynamic-block">
         <div class="max-w-7xl mx-auto w-full">
             <div class="grid lg:grid-cols-2 gap-12 items-center">
                 <div class="order-2 lg:order-1 space-y-8 animate-fade-in-up">
@@ -177,7 +199,7 @@
                 </div>
                 <div class="order-1 lg:order-2 relative animate-fade-in-up delay-100">
                     <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square group bg-gray-100">
-                        <img id="hero-main-image" src="" data-fallback="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop" alt="메인 이미지" class="defer-img w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
+                        <img id="hero-main-image" src="" data-fallback="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="메인 이미지" class="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 filter brightness-90 grayscale-[20%]">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70"></div>
                         <div class="absolute bottom-8 left-8 text-white">
                             <p class="font-serif text-xl italic leading-relaxed">"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."</p>
@@ -189,7 +211,7 @@
     </section>
 
     <!-- Story Section -->
-    <section id="story" class="py-24 bg-white">
+    <section id="story" class="py-24 bg-white dynamic-block">
         <div class="max-w-5xl mx-auto px-6">
             <div class="text-center mb-24">
                 <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">The Truth & Reality</h2>
@@ -202,7 +224,7 @@
     </section>
 
     <!-- Promises Section -->
-    <section id="promises" class="py-24 bg-secondary relative overflow-hidden">
+    <section id="promises" class="py-24 bg-secondary relative overflow-hidden dynamic-block">
         <div class="max-w-7xl mx-auto px-6 relative z-10">
             <div class="text-center mb-16">
                 <h2 class="text-primary font-bold tracking-widest uppercase text-sm mb-3">Our Mission</h2>
@@ -214,7 +236,7 @@
     </section>
 
     <!-- Plan Section -->
-    <section id="plan" class="py-24 bg-white">
+    <section id="plan" class="py-24 bg-white dynamic-block">
         <div class="max-w-7xl mx-auto px-6">
             <div class="grid lg:grid-cols-2 gap-16 items-start">
                 <div>
@@ -237,7 +259,7 @@
     </section>
 
     <!-- Resources Section -->
-    <section id="resources" class="py-20 bg-gray-50 border-y border-gray-200">
+    <section id="resources" class="py-20 bg-gray-50 border-y border-gray-200 dynamic-block">
         <div class="max-w-7xl mx-auto px-6">
             <h2 id="resources-title-text" class="text-3xl font-serif font-bold mb-3 text-gray-900">행사 자료 패키지</h2>
             <p id="resources-desc-text" class="text-gray-500 mb-10">투명한 운영을 위한 모든 자료를 확인하세요.</p>
@@ -246,7 +268,7 @@
     </section>
 
     <!-- Poster Gallery -->
-    <section id="posters" class="py-20 bg-white border-b border-gray-100">
+    <section id="posters" class="py-20 bg-white border-b border-gray-100 dynamic-block">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center mb-12">
                 <h2 id="posters-title-text" class="text-3xl font-serif font-bold mb-3 text-gray-900">캠페인 포스터 갤러리</h2>
@@ -257,7 +279,7 @@
     </section>
 
     <!-- Community & Petition Section -->
-    <section id="community" class="py-24 bg-white">
+    <section id="community" class="py-24 bg-white dynamic-block">
         <div class="max-w-5xl mx-auto px-6">
             <!-- Comments -->
             <div class="mb-24">
@@ -413,7 +435,7 @@
                     </div>
                 </div>
                 <div class="bg-gray-900 h-64 sm:h-80 lg:h-full">
-                    <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="" class="defer-img w-full h-full object-cover" alt="후원 이미지">
+                    <img id="donate-side-image" data-fallback="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" class="w-full h-full object-cover" alt="후원 이미지">
                 </div>
             </div>
         </div>

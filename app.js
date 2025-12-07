@@ -15,23 +15,6 @@ let ytIframe = null;
 let isAudioMuted = true;
 const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 
-function updateMetaTags(data) {
-    const strip = (v) => (v || '').replace(/<[^>]*>/g, '') || '컨텐츠 없음';
-    const title = strip(data?.hero?.title);
-    const desc = strip(data?.hero?.subtitle);
-    const img = data?.hero?.image || data?.settings?.donateImage || BLANK_IMG;
-
-    const setMeta = (selector, content) => {
-        const el = document.querySelector(selector);
-        if (el) el.setAttribute('content', content || '컨텐츠 없음');
-    };
-
-    setMeta('meta[property="og:title"]', title);
-    setMeta('meta[name="description"]', desc);
-    setMeta('meta[property="og:description"]', desc);
-    setMeta('meta[property="og:image"]', img);
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
     initApp();
@@ -61,10 +44,7 @@ function renderContent(data) {
     document.getElementById('hero-title-text').innerHTML = data.hero.title;
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
     const heroImg = document.getElementById('hero-main-image');
-    if(heroImg) {
-        heroImg.src = data.hero.image || heroImg.dataset.fallback || '';
-        heroImg.classList.add('loaded');
-    }
+    if(heroImg) heroImg.src = data.hero.image || heroImg.dataset.fallback || BLANK_IMG;
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
@@ -85,10 +65,7 @@ function renderContent(data) {
     document.getElementById('progress-bar').style.width = `${percent}%`;
     document.getElementById('total-goal-chart-label').textContent = formatCurrency(data.settings.targetAmount);
     const donateSideImg = document.getElementById('donate-side-image');
-    if(donateSideImg) {
-        donateSideImg.src = data.settings.donateImage || donateSideImg.dataset.fallback || '';
-        donateSideImg.classList.add('loaded');
-    }
+    if(donateSideImg) donateSideImg.src = data.settings.donateImage || donateSideImg.src;
     updateMetaTags(data);
 
 
@@ -147,7 +124,9 @@ function renderContent(data) {
     renderPetitions(data);
     renderSignatures(data);
     setupBackgroundAudio(data.settings?.musicUrl);
-    updateMetaTags(data);
+    document.body.classList.remove('data-loading');
+    const loader = document.getElementById('page-loader');
+    if(loader) loader.classList.add('hidden');
 }
 
 function setupEventListeners(data) {
