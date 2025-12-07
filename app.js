@@ -233,8 +233,6 @@ function setupEventListeners(data) {
         reader.readAsDataURL(file);
     });
 
-    // 파일 업로드는 사용하지 않고, URL/텍스트만 처리합니다.
-
     document.getElementById('petition-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('pet-name').value;
@@ -244,12 +242,29 @@ function setupEventListeners(data) {
         let fileName = file ? file.name : '';
         const now = new Date();
 
-        let fileUrl = '';
-        if(file) {
-            showToast('현재는 파일 업로드를 지원하지 않습니다. URL로만 등록해주세요.');
+        const recipient = data.settings?.petitionEmail || '';
+        if(!recipient) {
+            showToast('관리자가 수신 이메일을 설정하지 않았습니다.');
             return;
         }
 
+        const fileContent = file ? await readFileAsDataUrl(file) : '';
+        // 이메일 전송
+        try {
+            await fetch('/.netlify/functions/send-petition-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: recipient,
+                    name,
+                    file: file ? { name: file.name, type: file.type, content: fileContent } : {}
+                })
+            });
+        } catch (err) {
+            console.error('메일 전송 실패', err);
+        }
+
+        let fileUrl = '';
         data.petitions.push({
             name,
             date: now.toISOString(),

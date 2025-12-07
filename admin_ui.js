@@ -534,6 +534,8 @@ export const AdminUI = {
                             <div class="md:col-span-1 space-y-1">
                                 <label class="text-xs text-gray-500">탄원서 양식 다운로드 URL</label>
                                 <input id="flow-petition-link" value="${sanitize(data.settings?.petitionFormUrl || '')}" class="w-full border p-2 rounded" placeholder="https://...pdf">
+                                <label class="text-xs text-gray-500 block mt-2">탄원서 수신 이메일</label>
+                                <input id="flow-petition-email" value="${sanitize(data.settings?.petitionEmail || '')}" class="w-full border p-2 rounded" placeholder="admin@example.com">
                                 <label class="text-[11px] text-gray-500 block mt-2">파일 업로드 (비활성화됨)</label>
                                 <input type="file" id="flow-petition-upload" class="w-full text-[11px] opacity-60 cursor-not-allowed" disabled>
                             </div>
@@ -1006,6 +1008,7 @@ export const AdminUI = {
             data.settings.footerEmail = getVal('edit-footer-email', data.settings.footerEmail || '');
             data.settings.hiddenSections = Array.from(new Set(data.settings.hiddenSections || []));
             data.settings.petitionFormUrl = getVal('flow-petition-link', data.settings?.petitionFormUrl || '');
+            data.settings.petitionEmail = getVal('flow-petition-email', data.settings?.petitionEmail || '');
             data.settings.donateMainUrl = getVal('flow-donate-main-url', data.settings?.donateMainUrl || '');
             data.settings.donateKakaoUrl = getVal('flow-donate-kakao-url', data.settings?.donateKakaoUrl || '');
             data.settings.donateHappyUrl = getVal('flow-donate-happy-url', data.settings?.donateHappyUrl || '');

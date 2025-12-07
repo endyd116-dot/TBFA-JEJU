@@ -109,6 +109,7 @@ export const DataStore = {
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],
                 petitionFormUrl: "",
+                petitionEmail: "",
                 donateMainUrl: "",
                 donateKakaoUrl: "https://qr.kakaopay.com/Ej8e5jZ",
                 donateHappyUrl: "https://happybean.naver.com",
