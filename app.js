@@ -13,6 +13,24 @@ let bgAudioType = 'audio'; // 'audio' | 'youtube'
 let isAudioPlaying = false;
 let ytIframe = null;
 let isAudioMuted = true;
+const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+
+function updateMetaTags(data) {
+    const strip = (v) => (v || '').replace(/<[^>]*>/g, '') || '컨텐츠 없음';
+    const title = strip(data?.hero?.title);
+    const desc = strip(data?.hero?.subtitle);
+    const img = data?.hero?.image || data?.settings?.donateImage || BLANK_IMG;
+
+    const setMeta = (selector, content) => {
+        const el = document.querySelector(selector);
+        if (el) el.setAttribute('content', content || '컨텐츠 없음');
+    };
+
+    setMeta('meta[property="og:title"]', title);
+    setMeta('meta[name="description"]', desc);
+    setMeta('meta[property="og:description"]', desc);
+    setMeta('meta[property="og:image"]', img);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DataStore.loadRemote();
@@ -26,6 +44,7 @@ window.addEventListener('dataUpdated', (e) => {
     const updated = e.detail || DataStore.get();
     renderContent(updated);
     renderCharts(updated);
+    updateMetaTags(updated);
 });
 
 function initApp() {
@@ -70,6 +89,7 @@ function renderContent(data) {
         donateSideImg.src = data.settings.donateImage || donateSideImg.dataset.fallback || '';
         donateSideImg.classList.add('loaded');
     }
+    updateMetaTags(data);
 
 
     document.getElementById('acc-owner').textContent = data.settings.accountOwner;
@@ -127,6 +147,7 @@ function renderContent(data) {
     renderPetitions(data);
     renderSignatures(data);
     setupBackgroundAudio(data.settings?.musicUrl);
+    updateMetaTags(data);
 }
 
 function setupEventListeners(data) {
