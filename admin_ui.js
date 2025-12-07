@@ -30,6 +30,83 @@ export const AdminUI = {
             document.getElementById('preview-site').addEventListener('click', () => document.getElementById('admin-dashboard').classList.add('hidden'));
         }
     },
+    renderSignResourcesMgr(container, data) {
+        const list = data.signResources || [];
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-lg">서명 자료 관리</h3>
+                    <button id="add-sign-resource" class="border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-gray-50 flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> 추가</button>
+                </div>
+                <p class="text-sm text-gray-500">서명 섹션에서 보여줄 자료를 편집하세요.</p>
+                <div class="space-y-6">
+                    ${list.map((r, i) => `
+                        <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-500">자료 #${i+1}</span>
+                                <div class="flex gap-2">
+                                    <button class="border px-2 py-1 rounded text-xs" onclick="window.moveSignResource(${i}, -1)">▲</button>
+                                    <button class="border px-2 py-1 rounded text-xs" onclick="window.moveSignResource(${i}, 1)">▼</button>
+                                    <button class="text-red-500 border border-red-200 px-2 py-1 rounded text-xs" onclick="window.delSignResource(${i})">삭제</button>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 mb-2">
+                                <div class="flex-1">
+                                    <label class="block text-xs text-gray-500 mb-1">제목</label>
+                                    <input type="text" id="sign-res-title-${i}" value="${sanitize(r.title)}" class="w-full border p-2 rounded text-sm">
+                                </div>
+                                <div class="w-32">
+                                    <label class="block text-xs text-gray-500 mb-1">타입</label>
+                                    <input type="text" id="sign-res-type-${i}" value="${r.type || ''}" class="w-full border p-2 rounded text-sm bg-gray-100" readonly>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">HTML 내용</label>
+                                <textarea id="sign-res-content-${i}" class="w-full border p-2 rounded text-sm font-mono h-32 focus:h-64 transition-all">${r.content || ''}</textarea>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <button onclick="window.saveSignResource(${i})" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-black">저장</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        window.saveSignResource = (i) => {
+            const title = document.getElementById(`sign-res-title-${i}`).value;
+            const content = document.getElementById(`sign-res-content-${i}`).value;
+            data.signResources[i].title = title;
+            data.signResources[i].content = content;
+            DataStore.save(data);
+            showToast('서명 자료가 저장되었습니다.');
+        };
+        window.moveSignResource = (i, dir) => {
+            const next = i + dir;
+            if(next < 0 || next >= data.signResources.length) return;
+            [data.signResources[i], data.signResources[next]] = [data.signResources[next], data.signResources[i]];
+            DataStore.save(data);
+            this.renderSignResourcesMgr(container, data);
+        };
+        window.delSignResource = (i) => {
+            if(confirm('자료를 삭제하시겠습니까?')) {
+                data.signResources.splice(i,1);
+                DataStore.save(data);
+                this.renderSignResourcesMgr(container, data);
+            }
+        };
+        const addBtn = document.getElementById('add-sign-resource');
+        if(addBtn) addBtn.onclick = () => {
+            data.signResources.push({
+                id: `sign-res-${Date.now()}`,
+                title: '새 서명 자료',
+                type: 'SIGN',
+                content: '<p>내용을 입력하세요.</p>'
+            });
+            DataStore.save(data);
+            this.renderSignResourcesMgr(container, data);
+        };
+    },
     
     maskIP(ip) {
         if (!ip) return 'Unknown';
@@ -54,6 +131,7 @@ export const AdminUI = {
         else if(tab === 'settings') this.renderSettings(container, data);
         else if(tab === 'posters') this.renderPosterMgr(container, data);
         else if(tab === 'resources') this.renderResourcesMgr(container, data);
+        else if(tab === 'signResources') this.renderSignResourcesMgr(container, data);
         else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
         
         if(window.lucide) lucide.createIcons();

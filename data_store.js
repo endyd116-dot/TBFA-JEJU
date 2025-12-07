@@ -320,6 +320,7 @@ export const DataStore = {
 </div>`
                 }
             ],
+            signResources: [],
             posters: [
                 { title: "거리 캠페인용", url: "https://images.unsplash.com/photo-1599059813005-11265ba4b4ce?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
                 { title: "SNS 공유용", url: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },

@@ -147,6 +147,7 @@ function renderContent(data) {
     applySectionOrder(data.settings?.sectionOrder);
     renderPetitions(data);
     renderSignatures(data);
+    renderSignResources(data);
     setupBackgroundAudio(data.settings?.musicUrl);
 }
 
@@ -591,6 +592,18 @@ function setupEventListeners(data) {
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     };
+
+    window.openSignResource = (idx) => {
+        const data = DataStore.get();
+        const item = data.signResources && data.signResources[idx];
+        if(!item) return;
+        const modal = document.getElementById('resource-modal');
+        document.getElementById('res-modal-title').textContent = item.title || '';
+        const contentContainer = document.getElementById('res-modal-desc');
+        contentContainer.innerHTML = item.content || '';
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('opacity-100'), 10);
+    };
 }
 
 function setupBackgroundAudio(url) {
@@ -786,6 +799,25 @@ function renderPromises(data) {
             </div>
             <h4 class="font-bold text-xl mb-3 text-gray-900">${sanitize(p.title)}</h4>
             <p class="text-gray-600 leading-relaxed text-sm">${sanitize(p.desc)}</p>
+        </div>
+    `).join('');
+}
+
+function renderSignResources(data) {
+    const grid = document.getElementById('sign-resources-grid');
+    if(!grid) return;
+    const items = (data.signResources || []);
+    if(items.length === 0) {
+        grid.innerHTML = '<div class="text-center text-gray-400 py-4 col-span-full">서명 자료가 없습니다.</div>';
+        return;
+    }
+    grid.innerHTML = items.map((r,i)=>`
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all group cursor-pointer" onclick="window.openSignResource(${i})">
+            <div class="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+            <h4 class="font-bold text-gray-800 mb-1">${sanitize(r.title || '')}</h4>
+            <p class="text-xs text-gray-400">${r.type || ''}</p>
         </div>
     `).join('');
 }
