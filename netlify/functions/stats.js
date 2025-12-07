@@ -41,8 +41,18 @@ exports.handler = async (event) => {
         const clientIp = (ipHeader.split(',')[0] || '').trim() || 'unknown';
         const device = body.device || 'unknown';
         const userAgent = body.userAgent || event.headers['user-agent'] || '';
+        const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
         try {
+            // 동일 IP가 오늘 이미 기록되었으면 스킵
+            const exists = await pool.query(
+                "SELECT 1 FROM stats WHERE ip = $1 AND to_char(timestamp::date, 'YYYY-MM-DD') = $2 LIMIT 1",
+                [clientIp, todayKey]
+            );
+            if (exists.rows.length > 0) {
+                return respond(200, { ok: true, skipped: true });
+            }
+
             await pool.query(
                 'INSERT INTO stats (timestamp, device, ip, user_agent) VALUES (now(), $1, $2, $3)',
                 [device, clientIp, userAgent]

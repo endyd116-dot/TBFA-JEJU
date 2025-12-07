@@ -64,6 +64,12 @@ function renderContent(data) {
     const siteSubtitle = document.getElementById('header-site-subtitle');
     if (siteTitle) siteTitle.textContent = data.settings?.siteTitle || '교사유가족협의회';
     if (siteSubtitle) siteSubtitle.textContent = data.settings?.siteSubtitle || "Teacher's Family Association";
+
+    const blogLink = (data.settings?.shareLinks || [])[0]?.url || '';
+    const headerBlog = document.getElementById('header-blog-link');
+    if (headerBlog && blogLink) headerBlog.href = blogLink;
+    const heroBlog = document.getElementById('hero-blog-link');
+    if (heroBlog && blogLink) heroBlog.href = blogLink;
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;
