@@ -60,6 +60,10 @@ function renderContent(data) {
             if (headerIcon) headerIcon.classList.remove('hidden');
         }
     }
+    const siteTitle = document.getElementById('header-site-title');
+    const siteSubtitle = document.getElementById('header-site-subtitle');
+    if (siteTitle) siteTitle.textContent = data.settings?.siteTitle || '교사유가족협의회';
+    if (siteSubtitle) siteSubtitle.textContent = data.settings?.siteSubtitle || "Teacher's Family Association";
     
 
     document.getElementById('footer-desc-text').innerHTML = data.settings.footerDesc;

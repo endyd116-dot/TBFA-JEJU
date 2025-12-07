@@ -373,6 +373,21 @@ export const AdminUI = {
                                         <input type="file" id="flow-logo-upload" accept="image/*" class="w-full text-[11px]">
                                     </div>
                                 </div>
+                                <div class="grid md:grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">사이트 제목</label>
+                                        <input id="flow-site-title" value="${sanitize(data.settings?.siteTitle || '')}" class="w-full border p-2 rounded text-sm" placeholder="교사유가족협의회">
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] text-gray-500">사이트 부제</label>
+                                        <input id="flow-site-subtitle" value="${sanitize(data.settings?.siteSubtitle || '')}" class="w-full border p-2 rounded text-sm" placeholder="Teacher's Family Association">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-gray-500">헤더 블로그 링크</label>
+                                    <input id="flow-blog-link" value="${sanitize(data.settings?.shareLinks?.[0]?.url || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://blog.naver.com/...">
+                                    <p class="text-[11px] text-gray-400 mt-1">헤더 블로그 버튼이 이동할 링크를 입력하세요.</p>
+                                </div>
                             </div>
                             <div class="space-y-2">
                                 <div class="w-full aspect-square bg-gray-50 border rounded overflow-hidden">
@@ -1073,6 +1088,10 @@ export const AdminUI = {
             data.settings.smtpUser = getVal('flow-smtp-user', data.settings?.smtpUser || '');
             data.settings.smtpPass = getVal('flow-smtp-pass', data.settings?.smtpPass || '');
             data.settings.fromEmail = getVal('flow-from-email', data.settings?.fromEmail || '');
+            data.settings.siteTitle = getVal('flow-site-title', data.settings?.siteTitle || '');
+            data.settings.siteSubtitle = getVal('flow-site-subtitle', data.settings?.siteSubtitle || '');
+            const blogUrl = getVal('flow-blog-link', data.settings?.shareLinks?.[0]?.url || '');
+            data.settings.shareLinks = [{ label: "블로그", url: blogUrl }];
             data.settings.donateMainUrl = getVal('flow-donate-main-url', data.settings?.donateMainUrl || '');
             data.settings.donateKakaoUrl = getVal('flow-donate-kakao-url', data.settings?.donateKakaoUrl || '');
             data.settings.donateHappyUrl = getVal('flow-donate-happy-url', data.settings?.donateHappyUrl || '');

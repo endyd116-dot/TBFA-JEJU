@@ -107,6 +107,8 @@ export const DataStore = {
                 hiddenSections: [],
                 musicUrl: "",
                 logoUrl: "",
+                siteTitle: "교사유가족협의회",
+                siteSubtitle: "Teacher's Family Association",
                 shareLinks: [
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],
