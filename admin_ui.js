@@ -31,7 +31,8 @@ export const AdminUI = {
         }
     },
     renderSignResourcesMgr(container, data) {
-        const list = data.signResources || [];
+        data.signResources = Array.isArray(data.signResources) ? data.signResources : [];
+        const list = data.signResources;
         container.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
                 <div class="flex items-center justify-between">
@@ -74,6 +75,7 @@ export const AdminUI = {
         `;
 
         window.saveSignResource = (i) => {
+            if(!data.signResources) data.signResources = [];
             const title = document.getElementById(`sign-res-title-${i}`).value;
             const content = document.getElementById(`sign-res-content-${i}`).value;
             data.signResources[i].title = title;
@@ -82,6 +84,7 @@ export const AdminUI = {
             showToast('서명 자료가 저장되었습니다.');
         };
         window.moveSignResource = (i, dir) => {
+            if(!data.signResources) data.signResources = [];
             const next = i + dir;
             if(next < 0 || next >= data.signResources.length) return;
             [data.signResources[i], data.signResources[next]] = [data.signResources[next], data.signResources[i]];
@@ -89,6 +92,7 @@ export const AdminUI = {
             this.renderSignResourcesMgr(container, data);
         };
         window.delSignResource = (i) => {
+            if(!data.signResources) return;
             if(confirm('자료를 삭제하시겠습니까?')) {
                 data.signResources.splice(i,1);
                 DataStore.save(data);
@@ -97,6 +101,7 @@ export const AdminUI = {
         };
         const addBtn = document.getElementById('add-sign-resource');
         if(addBtn) addBtn.onclick = () => {
+            if(!data.signResources) data.signResources = [];
             data.signResources.push({
                 id: `sign-res-${Date.now()}`,
                 title: '새 서명 자료',
