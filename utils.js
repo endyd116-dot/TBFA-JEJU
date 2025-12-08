@@ -16,10 +16,26 @@ export const showToast = (msg) => {
 
 export const sanitize = (str) => {
     if (typeof str !== 'string') return '';
-    // DOMPurify로 1차 정제 후, 어트리뷰트/입력 value에도 안전하도록 따옴표를 엔티티로 변환
+    if (window.DOMPurify) {
+        return window.DOMPurify.sanitize(str);
+    }
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+};
+
+// 입력 value/속성에 쓸 때 HTML을 제거하고 따옴표까지 엔티티로 변환
+export const sanitizeAttr = (str) => {
+    if (typeof str !== 'string') return '';
     if (window.DOMPurify) {
         const cleaned = window.DOMPurify.sanitize(str);
+        // 엔티티 변환 순서: & 먼저 처리 후 < > "
         return cleaned
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }

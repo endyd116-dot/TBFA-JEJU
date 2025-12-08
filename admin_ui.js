@@ -1,5 +1,5 @@
 import { DataStore } from './data_store.js';
-import { formatCurrency, showToast, sanitize, randomThanks } from './utils.js';
+import { formatCurrency, showToast, sanitize, sanitizeAttr, randomThanks } from './utils.js';
 
 export const AdminUI = {
     init() {
@@ -804,24 +804,24 @@ export const AdminUI = {
 
                     <div id="flow-panel-donate" class="bg-white p-6 rounded-xl shadow-sm space-y-3">
                         <div class="flex items-center gap-2 mb-2"><i data-lucide="gift" class="w-4 h-4 text-primary"></i><h4 class="font-bold">후원 섹션</h4></div>
-                        <input id="flow-donate-title" value="${sanitize(data.flowTexts?.donateTitle || '')}" class="w-full border p-3 rounded text-lg" placeholder="후원 섹션 제목">
+                        <input id="flow-donate-title" value="${sanitizeAttr(data.flowTexts?.donateTitle || '')}" class="w-full border p-3 rounded text-lg" placeholder="후원 섹션 제목">
                         <div class="grid md:grid-cols-2 gap-3">
                             <div>
                                 <label class="text-xs text-gray-500">후원하기 버튼 이동 URL</label>
-                                <input id="flow-donate-main-url" value="${sanitize(data.settings?.donateMainUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                                <input id="flow-donate-main-url" value="${sanitizeAttr(data.settings?.donateMainUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
                             </div>
                             <div>
                                 <label class="text-xs text-gray-500">카카오페이 URL</label>
-                                <input id="flow-donate-kakao-url" value="${sanitize(data.settings?.donateKakaoUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                                <input id="flow-donate-kakao-url" value="${sanitizeAttr(data.settings?.donateKakaoUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
                             </div>
                             <div>
                                 <label class="text-xs text-gray-500">해피빈 URL</label>
-                                <input id="flow-donate-happy-url" value="${sanitize(data.settings?.donateHappyUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
+                                <input id="flow-donate-happy-url" value="${sanitizeAttr(data.settings?.donateHappyUrl || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...">
                             </div>
                             <div class="md:col-span-2 grid md:grid-cols-2 gap-2 items-center">
                                 <div>
                                     <label class="text-xs text-gray-500">후원 섹션 이미지 URL</label>
-                                    <input id="flow-donate-image" value="${sanitize(data.settings?.donateImage || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...jpg">
+                                    <input id="flow-donate-image" value="${sanitizeAttr(data.settings?.donateImage || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...jpg">
                                 </div>
                                 <div>
                                     <label class="text-[11px] text-gray-500 block">이미지 업로드</label>
@@ -838,15 +838,15 @@ export const AdminUI = {
                         <div class="grid md:grid-cols-3 gap-3">
                             <div>
                                 <label class="text-xs text-gray-500">예금주</label>
-                                <input id="flow-acc-owner" value="${sanitize(data.settings?.accountOwner || '')}" class="w-full border p-2 rounded text-sm">
+                                <input id="flow-acc-owner" value="${sanitizeAttr(data.settings?.accountOwner || '')}" class="w-full border p-2 rounded text-sm">
                             </div>
                             <div>
                                 <label class="text-xs text-gray-500">은행</label>
-                                <input id="flow-acc-bank" value="${sanitize(data.settings?.accountBank || '')}" class="w-full border p-2 rounded text-sm">
+                                <input id="flow-acc-bank" value="${sanitizeAttr(data.settings?.accountBank || '')}" class="w-full border p-2 rounded text-sm">
                             </div>
                             <div>
                                 <label class="text-xs text-gray-500">계좌번호</label>
-                                <input id="flow-acc-number" value="${sanitize(data.settings?.accountNumber || '')}" class="w-full border p-2 rounded text-sm">
+                                <input id="flow-acc-number" value="${sanitizeAttr(data.settings?.accountNumber || '')}" class="w-full border p-2 rounded text-sm">
                             </div>
                         </div>
                     </div>
