@@ -16,8 +16,12 @@ export const showToast = (msg) => {
 
 export const sanitize = (str) => {
     if (typeof str !== 'string') return '';
+    // DOMPurify로 1차 정제 후, 어트리뷰트/입력 value에도 안전하도록 따옴표를 엔티티로 변환
     if (window.DOMPurify) {
-        return window.DOMPurify.sanitize(str);
+        const cleaned = window.DOMPurify.sanitize(str);
+        return cleaned
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
     return str.replace(/&/g, '&amp;')
               .replace(/</g, '&lt;')
