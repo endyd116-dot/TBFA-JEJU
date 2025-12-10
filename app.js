@@ -14,6 +14,7 @@ let isAudioPlaying = false;
 let ytIframe = null;
 let isAudioMuted = true;
 const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+let CURRENT_DATA = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const latest = await DataStore.loadRemote();
@@ -39,6 +40,7 @@ function initApp(preloaded) {
 }
 
 function renderContent(data) {
+    CURRENT_DATA = data;
 
     document.getElementById('hero-title-text').innerHTML = data.hero.title;
     document.getElementById('hero-subtitle-text').innerHTML = data.hero.subtitle;
@@ -140,7 +142,7 @@ function renderContent(data) {
     renderComments(approvedComments, commentList);
 
 
-    renderStories();
+    renderStories(data);
     renderPromises(data);
     renderPlanList(data);
     applyFlowTexts(data);
@@ -489,7 +491,7 @@ function setupEventListeners(data) {
     };
 
     window.openResource = (idx) => {
-        const data = DataStore.get();
+        const data = CURRENT_DATA || DataStore.get();
         const item = data.resources[idx];
         if(!item) return;
         
@@ -523,7 +525,7 @@ function setupEventListeners(data) {
     });
 
     window.openPoster = async (idx) => {
-        const data = DataStore.get();
+        const data = CURRENT_DATA || DataStore.get();
         const poster = data.posters[idx];
         if(!poster) return;
         const modal = document.getElementById('poster-modal');
@@ -550,7 +552,7 @@ function setupEventListeners(data) {
         const kakaoBtn = document.getElementById('poster-kakao-share-btn');
 
         if (linkList) {
-            const links = (DataStore.get().settings?.shareLinks || []).filter(l=>l.url);
+            const links = (data.settings?.shareLinks || []).filter(l=>l.url);
             linkList.innerHTML = links.map(l => `
                 ${(function(){
                     const isNaver = /네이버/i.test(l.label);
@@ -764,10 +766,11 @@ function renderCharts(data) {
     }
 }
 
-function renderStories() {
+function renderStories(data) {
     const container = document.getElementById('story-container');
     if(!container) return;
-    const blocks = Array.isArray(DataStore.get().storyBlocks) ? DataStore.get().storyBlocks : [];
+    const src = data && Array.isArray(data.storyBlocks) ? data.storyBlocks : DataStore.get().storyBlocks || [];
+    const blocks = Array.isArray(src) ? src : [];
     container.innerHTML = blocks.map((b, idx) => `
         <div class="rounded-2xl p-6 md:p-8 shadow-lg" style="background:${sanitize(b.bg || '#f3f4f6')}">
             <div class="grid md:grid-cols-2 gap-12 items-center ${b.position === 'left' ? 'md:flex-row-reverse' : ''}">
