@@ -596,7 +596,7 @@ function setupEventListeners(data) {
     };
 
     window.openSignResource = (idx) => {
-        const data = DataStore.get();
+        const data = CURRENT_DATA || DataStore.get();
         const item = data.signResources && data.signResources[idx];
         if(!item) return;
         const modal = document.getElementById('resource-modal');
