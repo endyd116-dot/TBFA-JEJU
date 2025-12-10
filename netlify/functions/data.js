@@ -29,8 +29,14 @@ const verifyToken = (authHeader, secret) => {
 };
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
-const DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || '';
-const pool = DB_URL ? new Pool({ connectionString: DB_URL }) : null;
+const DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.NETLIFY_DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || '';
+const pool = DB_URL
+    ? new Pool({
+        connectionString: DB_URL,
+        // Neon/Netlify DB는 SSL 요구. sslmode=require가 있어도 node-postgres는 명시 설정이 필요.
+        ssl: { rejectUnauthorized: false }
+      })
+    : null;
 
 const ensureTable = async () => {
     if (!pool) throw new Error('Database not configured');
