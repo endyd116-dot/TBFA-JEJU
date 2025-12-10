@@ -16,8 +16,8 @@ let isAudioMuted = true;
 const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await DataStore.loadRemote();
-    initApp();
+    const latest = await DataStore.loadRemote();
+    initApp(latest);
     Auth.check();
     Tracker.init();
 });
@@ -29,8 +29,8 @@ window.addEventListener('dataUpdated', (e) => {
     renderCharts(updated);
 });
 
-function initApp() {
-    const data = DataStore.get();
+function initApp(preloaded) {
+    const data = preloaded || DataStore.get();
     renderContent(data);
     setupEventListeners(data);
     renderCharts(data);

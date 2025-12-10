@@ -25,7 +25,7 @@ export const DataStore = {
         })();
 
         try {
-            const res = await fetch('/.netlify/functions/data');
+            const res = await fetch('/.netlify/functions/data', { cache: 'no-store' });
             if (!res.ok) throw new Error('remote fetch failed');
             const remote = await res.json();
             if (remote && remote.hero && remote.settings) {
