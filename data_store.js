@@ -74,7 +74,7 @@ export const DataStore = {
             hero: {
                 title: "선생님의 명예 회복과<br>남겨진 가족을 위해",
                 subtitle: "제주중학교 사건 故 현승준 선생님의 억울함을 알리고<br>유가족의 생계와 치유를 지원합니다.",
-                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1024&auto=format&fit=crop",
+                image: "",
                 overlay: `"하루아침에 남편이 떠나고,<br>아이들의 치료비조차 막막합니다."`
             },
             storyBlocks: [
@@ -88,7 +88,7 @@ export const DataStore = {
                 {
                     title: "멈추지 않았던 알림음과 놓쳐버린 골든타임",
                     content: `2025년 3월, 생활지도 과정에서 시작된 악성 민원은 밤낮을 가리지 않았습니다. 지속적인 인격 모독과 결정적인 악성 문자는 20년 베테랑 교사의 삶을 무너뜨렸습니다.<br><br>2025.05.20 17:04 보호자로부터 결정적인 악성 문자 수신<br>2025.05.22 00:46 학교 창고에서 숨진 채 발견 (골든타임 상실)`,
-                    image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1000&auto=format&fit=crop",
+                    image: "",
                     position: "left",
                     bg: "#f3f4f6"
                 },
@@ -333,10 +333,10 @@ export const DataStore = {
             ],
             signResources: [],
             posters: [
-                { title: "거리 캠페인용", url: "https://images.unsplash.com/photo-1599059813005-11265ba4b4ce?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
-                { title: "SNS 공유용", url: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
-                { title: "추모 포스터", url: "https://images.unsplash.com/photo-1518644730709-0835105d9daa?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" },
-                { title: "모금 안내", url: "https://images.unsplash.com/photo-1532629345422-7515f3d16335?auto=format&fit=crop&q=80&w=1000", link: "https://example.com/support", qr: "" }
+                { title: "거리 캠페인용", url: "", link: "https://example.com/support", qr: "" },
+                { title: "SNS 공유용", url: "", link: "https://example.com/support", qr: "" },
+                { title: "추모 포스터", url: "", link: "https://example.com/support", qr: "" },
+                { title: "모금 안내", url: "", link: "https://example.com/support", qr: "" }
             ]
         };
         this.save(defaultData);
