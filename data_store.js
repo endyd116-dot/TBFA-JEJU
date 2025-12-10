@@ -1,35 +1,17 @@
 export const DataStore = {
     get() {
-        const data = localStorage.getItem('tbfa_data');
-        if (data) {
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed && parsed.hero && parsed.settings) return parsed;
-            } catch (e) {
-                console.warn('Local data parse failed, reinit', e);
-            }
-        }
-        return this.init();
+        const local = this._safeGet();
+        return local || this.init();
     },
     async loadRemote() {
-        const existingLocal = (() => {
-            const raw = localStorage.getItem('tbfa_data');
-            if (!raw) return null;
-            try {
-                const parsed = JSON.parse(raw);
-                if (parsed && parsed.hero && parsed.settings) return parsed;
-            } catch (e) {
-                console.warn('Local data parse failed', e);
-            }
-            return null;
-        })();
+        const existingLocal = this._safeGet();
 
         try {
             const res = await fetch('/.netlify/functions/data', { cache: 'no-store' });
             if (!res.ok) throw new Error('remote fetch failed');
             const remote = await res.json();
             if (remote && remote.hero && remote.settings) {
-                localStorage.setItem('tbfa_data', JSON.stringify(remote));
+                this._safeSet(remote);
                 return remote;
             }
             if (existingLocal) return existingLocal;
@@ -40,7 +22,7 @@ export const DataStore = {
         return this.init();
     },
     save(data) {
-        localStorage.setItem('tbfa_data', JSON.stringify(data));
+        this._safeSet(data);
         // try to persist remotely if admin token present
         const token = sessionStorage.getItem('tbfa_admin_token') || '';
         if (token) {
@@ -66,8 +48,26 @@ export const DataStore = {
         }
     },
     reset() {
-        localStorage.removeItem('tbfa_data');
+        try { localStorage.removeItem('tbfa_data'); } catch (e) { console.warn('localStorage remove failed', e); }
         return this.init();
+    },
+    _safeGet() {
+        try {
+            const raw = localStorage.getItem('tbfa_data');
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.hero && parsed.settings) return parsed;
+        } catch (e) {
+            console.warn('Local data access failed', e);
+        }
+        return null;
+    },
+    _safeSet(data) {
+        try {
+            localStorage.setItem('tbfa_data', JSON.stringify(data));
+        } catch (e) {
+            console.warn('localStorage set failed, will render without caching', e);
+        }
     },
     init() {
         const defaultData = {
