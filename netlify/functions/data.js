@@ -50,13 +50,13 @@ const ensureTable = async () => {
 };
 
 exports.handler = async (event) => {
-    if (!pool) return respond(500, { error: 'Database not configured' });
+    if (!pool) return respond(500, { error: 'Database not configured', detail: 'NETLIFY_DATABASE_URL not set in this environment' });
 
     try {
         await ensureTable();
     } catch (err) {
         console.error('Table ensure failed', err);
-        return respond(500, { error: 'Failed to prepare storage' });
+        return respond(500, { error: 'Failed to prepare storage', detail: err.message || String(err) });
     }
 
     if (event.httpMethod === 'GET') {
