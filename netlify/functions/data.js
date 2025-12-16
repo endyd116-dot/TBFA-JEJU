@@ -99,7 +99,7 @@ exports.handler = async (event) => {
             return respond(200, base);
         } catch (err) {
             console.error('GET failed', err);
-            return respond(500, { error: 'Failed to load data' });
+            return respond(500, { error: 'Failed to load data', detail: err.message || String(err) });
         }
     }
 
