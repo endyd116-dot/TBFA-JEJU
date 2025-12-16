@@ -101,7 +101,7 @@ function renderContent(data) {
 
 
     const donorList = document.getElementById('donor-list-display');
-    const donors = data.donations.slice(0, 20);
+    const donors = data.donations.slice(0, 100);
     if(donors.length === 0) {
         donorList.innerHTML = '<div class="donor-row text-gray-400">아직 후원이 없습니다.</div>';
     } else {
@@ -555,8 +555,8 @@ function setupEventListeners(data) {
             const url = data.settings?.donateKakaoUrl || 'https://qr.kakaopay.com/Ej8e5jZ';
             btn.onclick = () => window.open(url, '_blank');
         } else {
-            title.textContent = '해피빈 기부';
-            const url = data.settings?.donateHappyUrl || 'https://happybean.naver.com';
+            title.textContent = '일시후원 계좌이체 하기';
+            const url = data.settings?.donateHappyUrl || 'http://aq.gy/f/nwor^';
             btn.onclick = () => window.open(url, '_blank');
         }
     };
