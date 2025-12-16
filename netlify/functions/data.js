@@ -38,7 +38,7 @@ const pool = DB_URL
       })
     : null;
 
-const ensureTable = async () => {
+const ensureTables = async () => {
     if (!pool) throw new Error('Database not configured');
     await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (
@@ -47,13 +47,36 @@ const ensureTable = async () => {
             updated_at TIMESTAMPTZ DEFAULT now()
         )
     `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS signatures (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            ssn TEXT NOT NULL,
+            sign_data TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT now()
+        )
+    `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS comments (
+            id SERIAL PRIMARY KEY,
+            text TEXT NOT NULL,
+            author TEXT NOT NULL,
+            real_name TEXT,
+            ip TEXT,
+            device TEXT,
+            is_private BOOLEAN DEFAULT FALSE,
+            approved BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMPTZ DEFAULT now()
+        )
+    `);
 };
 
 exports.handler = async (event) => {
     if (!pool) return respond(500, { error: 'Database not configured', detail: 'NETLIFY_DATABASE_URL not set in this environment' });
 
     try {
-        await ensureTable();
+        await ensureTables();
     } catch (err) {
         console.error('Table ensure failed', err);
         return respond(500, { error: 'Failed to prepare storage', detail: err.message || String(err) });
@@ -63,7 +86,17 @@ exports.handler = async (event) => {
         try {
             const { rows } = await pool.query('SELECT data FROM settings WHERE id = $1', ['main']);
             const row = rows[0];
-            return respond(200, row ? row.data : {});
+            // signatures, comments 별도 테이블에서 가져와 병합
+            const { rows: signRows } = await pool.query('SELECT name, phone, ssn, sign_data as "signData", created_at as timestamp FROM signatures ORDER BY created_at DESC');
+            const { rows: commentRows } = await pool.query(`
+                SELECT text, author, real_name as "realName", ip, device, is_private as "isPrivate", approved, created_at 
+                FROM comments
+                ORDER BY created_at DESC
+            `);
+            const base = row ? row.data : {};
+            base.signatures = signRows || [];
+            base.comments = commentRows || [];
+            return respond(200, base);
         } catch (err) {
             console.error('GET failed', err);
             return respond(500, { error: 'Failed to load data' });

@@ -224,7 +224,7 @@ function setupEventListeners(data) {
     }
 
 
-    document.getElementById('comment-form').addEventListener('submit', (e) => {
+    document.getElementById('comment-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const author = document.getElementById('comment-author').value;
         const text = document.getElementById('comment-text').value;
@@ -245,12 +245,34 @@ function setupEventListeners(data) {
             device: meta.device,
             isPrivate
         };
-        
-        data.comments.unshift(newComment);
-        DataStore.save(data);
-        
-        showToast('응원 메시지가 전달되었습니다. (승인 후 표시)');
-        e.target.reset();
+        try {
+            const res = await fetch('/.netlify/functions/submit-comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text,
+                    author: newComment.author,
+                    realName: newComment.realName,
+                    ip: newComment.ip,
+                    device: newComment.device,
+                    isPrivate
+                })
+            });
+            const result = await res.json().catch(() => ({}));
+            if (!res.ok || result.error) {
+                console.error('Comment submit failed', result);
+                showToast('응원 전달에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            // 로컬에 추가(비승인 상태)
+            data.comments.unshift(newComment);
+            DataStore.save(data);
+            showToast('응원이 전달되었습니다. (승인 후 표시)');
+            e.target.reset();
+        } catch (err) {
+            console.error('Comment submit error', err);
+            showToast('응원 전달에 실패했습니다. 네트워크를 확인해주세요.');
+        }
     });
 
 
@@ -340,21 +362,40 @@ function setupEventListeners(data) {
             return;
         }
         const now = new Date();
-        data.signatures = data.signatures || [];
-        data.signatures.push({
-            name,
-            phone,
-            ssn,
-            timestamp: now.toISOString(),
-            signData
-        });
-        DataStore.save(data);
-        showToast('서명이 완료되었습니다.');
-        e.target.reset();
-        document.getElementById('sign-data').value = '';
-        signDirty = false;
-        document.getElementById('sign-status').textContent = '서명을 입력하세요.';
-        renderSignatures(data);
+        (async () => {
+            try {
+                const res = await fetch('/.netlify/functions/submit-signature', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, ssn, signData })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok || result.error) {
+                    console.error('Sign submit failed', result);
+                    showToast('서명 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    return;
+                }
+                // 로컬에도 반영
+                data.signatures = data.signatures || [];
+                data.signatures.unshift({
+                    name,
+                    phone,
+                    ssn,
+                    timestamp: now.toISOString(),
+                    signData
+                });
+                DataStore.save(data);
+                showToast('서명이 완료되었습니다.');
+                e.target.reset();
+                document.getElementById('sign-data').value = '';
+                signDirty = false;
+                document.getElementById('sign-status').textContent = '서명을 입력하세요.';
+                renderSignatures(data);
+            } catch (err) {
+                console.error('Sign submit error', err);
+                showToast('서명 저장에 실패했습니다. 네트워크를 확인해주세요.');
+            }
+        })();
     });
     
 
