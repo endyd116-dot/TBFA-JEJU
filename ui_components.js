@@ -13,7 +13,7 @@ export const UI = {
              const b = document.getElementById('payment-redirect-btn');
              m.classList.remove('hidden'); setTimeout(()=>m.classList.remove('opacity-0'),10);
              if(type === 'kakaopay') { t.textContent = '카카오페이'; b.onclick = () => window.open('https://qr.kakaopay.com/Ej7k6M', '_blank'); }
-             else { t.textContent = '해피빈'; b.onclick = () => window.open('https://happybean.naver.com', '_blank'); }
+             else { t.textContent = '일시후원하기버튼'; b.onclick = () => window.open('htthttp://aq.gy/f/nwor^ '_blank'); }
         };
     },
     renderAll(data) {
