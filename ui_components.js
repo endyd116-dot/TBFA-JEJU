@@ -43,7 +43,7 @@ export const UI = {
         document.getElementById('acc-number').textContent = data.account.number;
         document.getElementById('acc-owner').textContent = data.account.owner;
         
-        const items = data.donations.slice(0,20).map(d => `<div class="h-8 flex items-center justify-center gap-2"><span class="font-bold">${sanitize(d.name.substring(0,1))}*님</span><span class="text-primary">${formatCurrency(d.amount)}원</span><span class="text-gray-400 text-xs">${sanitize(d.aiMsg)}</span></div>`).join('');
+        const items = data.donations.slice(0,100).map(d => `<div class="h-8 flex items-center justify-center gap-2"><span class="font-bold">${sanitize(d.name.substring(0,1))}*님</span><span class="text-primary">${formatCurrency(d.amount)}원</span><span class="text-gray-400 text-xs">${sanitize(d.aiMsg)}</span></div>`).join('');
         document.getElementById('donor-list-display').innerHTML = data.donations.length < 5 ? items : `<div class="ticker-wrap"><div class="ticker-move">${items}${items}</div></div>`;
     },
     renderPromises(data) { document.getElementById('promises-grid').innerHTML = data.promises.map(p=>`<div class="bg-white p-8 rounded-3xl shadow-card"><i data-lucide="${p.icon}" class="w-7 h-7 text-primary mb-4"></i><h4 class="font-bold mb-2">${p.title}</h4><p class="text-gray-500">${p.desc}</p></div>`).join(''); },
