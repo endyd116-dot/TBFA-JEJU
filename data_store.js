@@ -1,28 +1,28 @@
 export const DataStore = {
+    _cache: null,
     get() {
-        const local = this._safeGet();
-        return local || this.init();
+        return this._cache || this.init();
     },
     async loadRemote() {
-        const existingLocal = this._safeGet();
+        const existing = this._cache;
 
         try {
             const res = await fetch('/.netlify/functions/data', { cache: 'no-store' });
             if (!res.ok) throw new Error('remote fetch failed');
             const remote = await res.json();
             if (remote && remote.hero && remote.settings) {
-                this._safeSet(remote);
+                this._cache = remote;
                 return remote;
             }
-            if (existingLocal) return existingLocal;
+            if (existing) return existing;
         } catch (err) {
             console.warn('Remote load failed, using local/default', err);
-            if (existingLocal) return existingLocal;
+            if (existing) return existing;
         }
         return this.init();
     },
     save(data) {
-        this._safeSet(data);
+        this._cache = data;
         // try to persist remotely if admin token present
         const token = sessionStorage.getItem('tbfa_admin_token') || '';
         if (token) {
@@ -48,26 +48,8 @@ export const DataStore = {
         }
     },
     reset() {
-        try { localStorage.removeItem('tbfa_data'); } catch (e) { console.warn('localStorage remove failed', e); }
+        this._cache = null;
         return this.init();
-    },
-    _safeGet() {
-        try {
-            const raw = localStorage.getItem('tbfa_data');
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (parsed && parsed.hero && parsed.settings) return parsed;
-        } catch (e) {
-            console.warn('Local data access failed', e);
-        }
-        return null;
-    },
-    _safeSet(data) {
-        try {
-            localStorage.setItem('tbfa_data', JSON.stringify(data));
-        } catch (e) {
-            console.warn('localStorage set failed, will render without caching', e);
-        }
     },
     init() {
         const defaultData = {

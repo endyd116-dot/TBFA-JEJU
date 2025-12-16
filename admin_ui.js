@@ -1690,7 +1690,11 @@ th { background: #f3f4f6; text-align: left; }
                             </div>
                             <p class="text-gray-800 text-sm">${sanitize(c.text)}</p>
                             <div class="text-[10px] text-gray-400 flex gap-2 items-center mt-1 border-t pt-2 border-gray-200/50">
-                                <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${c.date} ${c.time || ''}</span>
+                                <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${(() => {
+                                    const src = c.timestamp || c.date || c.time;
+                                    const dt = src ? new Date(src) : null;
+                                    return (dt && !isNaN(dt)) ? dt.toLocaleString('ko-KR') : (c.date || c.time || '');
+                                })()}</span>
                                 <span class="w-px h-3 bg-gray-300"></span>
                                 <span class="flex items-center gap-1"><i data-lucide="monitor" class="w-3 h-3"></i> ${c.device || 'Unknown'}</span>
                                 <span class="w-px h-3 bg-gray-300"></span>

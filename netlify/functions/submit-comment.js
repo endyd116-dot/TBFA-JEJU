@@ -17,16 +17,10 @@ const pool = DB_URL
 const ensureTable = async () => {
     if (!pool) throw new Error('Database not configured');
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS comments (
-            id SERIAL PRIMARY KEY,
-            text TEXT NOT NULL,
-            author TEXT NOT NULL,
-            real_name TEXT,
-            ip TEXT,
-            device TEXT,
-            is_private BOOLEAN DEFAULT FALSE,
-            approved BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMPTZ DEFAULT now()
+        CREATE TABLE IF NOT EXISTS settings (
+            id TEXT PRIMARY KEY,
+            data JSONB NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT now()
         )
     `);
 };
@@ -55,9 +49,25 @@ exports.handler = async (event) => {
     }
 
     try {
+        const { rows } = await pool.query('SELECT data FROM settings WHERE id=$1', ['main']);
+        const base = rows[0]?.data || {};
+        const comments = Array.isArray(base.comments) ? base.comments : [];
+        comments.unshift({
+            text,
+            author,
+            realName: realName || null,
+            ip: ip || null,
+            device: device || null,
+            isPrivate: !!isPrivate,
+            approved: false,
+            timestamp: new Date().toISOString()
+        });
+        base.comments = comments;
         await pool.query(
-            'INSERT INTO comments (text, author, real_name, ip, device, is_private, approved, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7, now())',
-            [text, author, realName || null, ip || null, device || null, !!isPrivate, false]
+            `INSERT INTO settings (id, data, updated_at)
+             VALUES ($1, $2, now())
+             ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+            ['main', base]
         );
         return respond(200, { ok: true });
     } catch (err) {

@@ -154,6 +154,7 @@ function renderContent(data) {
 }
 
 function setupEventListeners(data) {
+    const signSavedIndicator = document.getElementById('sign-saved-indicator');
     const closeModal = (targetId) => {
         const modal = document.getElementById(targetId);
         if(!modal || modal.classList.contains('hidden')) return;
@@ -183,6 +184,12 @@ function setupEventListeners(data) {
         const ok = await Auth.login(id, pw);
         
         if(ok) {
+            // 최신 DB 데이터로 동기화 후 관리자 UI 렌더
+            const fresh = await DataStore.loadRemote();
+            if (fresh) {
+                renderContent(fresh);
+                renderCharts(fresh);
+            }
             document.getElementById('admin-modal').classList.remove('opacity-100');
             setTimeout(() => document.getElementById('admin-modal').classList.add('hidden'), 300);
             document.getElementById('admin-dashboard').classList.remove('hidden');
@@ -229,6 +236,8 @@ function setupEventListeners(data) {
         const author = document.getElementById('comment-author').value;
         const text = document.getElementById('comment-text').value;
         const isPrivate = document.getElementById('comment-private').checked;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        toggleLoading(submitBtn, true, '전송 중...');
         
 
         const meta = Tracker.getVisitorInfo();
@@ -272,6 +281,8 @@ function setupEventListeners(data) {
         } catch (err) {
             console.error('Comment submit error', err);
             showToast('응원 전달에 실패했습니다. 네트워크를 확인해주세요.');
+        } finally {
+            toggleLoading(submitBtn, false);
         }
     });
 
@@ -285,6 +296,8 @@ function setupEventListeners(data) {
 
     document.getElementById('petition-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        toggleLoading(submitBtn, true, '제출 중...');
         const name = document.getElementById('pet-name').value;
         const meta = Tracker.getVisitorInfo();
         const fileInput = document.getElementById('pet-file');
@@ -341,15 +354,19 @@ function setupEventListeners(data) {
         e.target.reset();
         document.getElementById('pet-file-name').classList.add('hidden');
         renderPetitions(data);
+        toggleLoading(submitBtn, false);
     });
 
     document.getElementById('sign-form').addEventListener('submit', (e) => {
         e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        toggleLoading(submitBtn, true, '제출 중...');
         const name = document.getElementById('sign-name').value;
         const phoneRaw = document.getElementById('sign-phone').value;
         const digits = phoneRaw.replace(/\D/g, '');
         if(!(digits.length === 10 || digits.length === 11)) {
             showToast('연락처를 숫자 10~11자리로 입력해주세요.');
+            toggleLoading(submitBtn, false);
             return;
         }
         const phone = digits.length === 11
@@ -359,6 +376,7 @@ function setupEventListeners(data) {
         const signData = document.getElementById('sign-data').value;
         if(!signData) {
             showToast('서명을 입력해주세요.');
+            toggleLoading(submitBtn, false);
             return;
         }
         const now = new Date();
@@ -394,6 +412,8 @@ function setupEventListeners(data) {
             } catch (err) {
                 console.error('Sign submit error', err);
                 showToast('서명 저장에 실패했습니다. 네트워크를 확인해주세요.');
+            } finally {
+                toggleLoading(submitBtn, false);
             }
         })();
     });
@@ -454,6 +474,11 @@ function setupEventListeners(data) {
             signCtx.clearRect(0,0,signCanvas.width, signCanvas.height);
             signDirty=false;
             setStatus('서명을 입력하세요.');
+            if (signSavedIndicator) {
+                signSavedIndicator.textContent = '서명 미저장';
+                signSavedIndicator.classList.remove('text-primary');
+                signSavedIndicator.classList.add('text-gray-500');
+            }
         }
     };
 
@@ -481,6 +506,11 @@ function setupEventListeners(data) {
         const hidden = document.getElementById('sign-data');
         if(hidden) hidden.value = dataUrl;
         setStatus('서명이 저장되었습니다.');
+        if (signSavedIndicator) {
+            signSavedIndicator.textContent = '서명 저장 완료';
+            signSavedIndicator.classList.remove('text-gray-500');
+            signSavedIndicator.classList.add('text-primary');
+        }
         if(signModal) signModal.classList.add('hidden');
     });
 
@@ -920,7 +950,11 @@ function renderPetitions(data) {
 
 function renderSignatures(data) {
     const totalEl = document.getElementById('sign-total-count');
-    if(totalEl) totalEl.textContent = data.signatures?.length || 0;
+    if(totalEl) {
+        const online = data.signatures?.length || 0;
+        const uploaded = data.petitions?.length || 0;
+        totalEl.textContent = online + uploaded;
+    }
 }
 
 function renderComments(approvedComments, container) {
@@ -943,16 +977,26 @@ function renderComments(approvedComments, container) {
 
     const renderPage = (page) => {
         const start = page * pageSize;
-        const slice = approvedComments.slice(start, start + pageSize);
+        // 항상 4개가 보이도록, 남은 아이템이 부족하면 처음부터 이어서 채움
+        const slice = [];
+        for (let i = 0; i < pageSize; i++) {
+            const idx = (start + i) % approvedComments.length;
+            slice.push(approvedComments[idx]);
+        }
         container.style.opacity = '0';
         container.style.transform = 'translateY(8px)';
         setTimeout(() => {
+            const formatDate = (c) => {
+                const src = c.timestamp || c.date || c.time;
+                const dt = src ? new Date(src) : null;
+                return (dt && !isNaN(dt)) ? dt.toLocaleDateString('ko-KR') : '';
+            };
             container.innerHTML = slice.map(c => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <p class="text-gray-800 mb-2 leading-relaxed">${sanitize(c.text)}</p>
                     <div class="flex justify-between items-center text-xs text-gray-400">
                         <span class="font-bold text-gray-600">${sanitize(c.author)}</span>
-                        <span>${c.date}</span>
+                        <span>${formatDate(c)}</span>
                     </div>
                 </div>
             `).join('');
@@ -1027,3 +1071,16 @@ function applySectionOrder(order) {
     });
     document.body.insertBefore(frag, footer);
 }
+const toggleLoading = (btn, loading, label) => {
+    if (!btn) return;
+    if (loading) {
+        btn.dataset.originalText = btn.textContent;
+        btn.textContent = label || '처리 중...';
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+    } else {
+        btn.textContent = btn.dataset.originalText || btn.textContent;
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    }
+};

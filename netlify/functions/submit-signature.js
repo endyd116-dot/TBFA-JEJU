@@ -17,13 +17,10 @@ const pool = DB_URL
 const ensureTable = async () => {
     if (!pool) throw new Error('Database not configured');
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS signatures (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            ssn TEXT NOT NULL,
-            sign_data TEXT NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT now()
+        CREATE TABLE IF NOT EXISTS settings (
+            id TEXT PRIMARY KEY,
+            data JSONB NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT now()
         )
     `);
 };
@@ -52,9 +49,16 @@ exports.handler = async (event) => {
     }
 
     try {
+        const { rows } = await pool.query('SELECT data FROM settings WHERE id=$1', ['main']);
+        const base = rows[0]?.data || {};
+        const signs = Array.isArray(base.signatures) ? base.signatures : [];
+        signs.push({ name, phone, ssn, signData, timestamp: new Date().toISOString() });
+        base.signatures = signs;
         await pool.query(
-            'INSERT INTO signatures (name, phone, ssn, sign_data, created_at) VALUES ($1,$2,$3,$4, now())',
-            [name, phone, ssn, signData]
+            `INSERT INTO settings (id, data, updated_at)
+             VALUES ($1, $2, now())
+             ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+            ['main', base]
         );
         return respond(200, { ok: true });
     } catch (err) {
