@@ -15,6 +15,8 @@ let ytIframe = null;
 let isAudioMuted = true;
 const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 let CURRENT_DATA = null;
+let ACTIVE_DONATE_LINK = '';
+const DONATE_FOCUS_SELECTOR = '#donate-modal input, #donate-modal textarea';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const latest = await DataStore.loadRemote();
@@ -150,16 +152,26 @@ function renderContent(data) {
     renderPetitions(data);
     renderSignatures(data);
     renderSignResources(data);
+    renderDonateFormFields(data);
+    applyDonateTerms(data);
     setupBackgroundAudio(data.settings?.musicUrl);
 }
 
 function setupEventListeners(data) {
     const signSavedIndicator = document.getElementById('sign-saved-indicator');
+    const donateModal = document.getElementById('donate-modal');
+    const donateForm = document.getElementById('regular-donate-form');
+    const donateSubmitBtn = document.getElementById('donate-submit-btn');
+    const donateFields = data.settings?.donateFields || [];
+    const DONATE_DRAFT_KEY = 'donate_form_draft';
     const closeModal = (targetId) => {
         const modal = document.getElementById(targetId);
         if(!modal || modal.classList.contains('hidden')) return;
         modal.classList.remove('opacity-100');
         setTimeout(() => modal.classList.add('hidden'), 300);
+        if (targetId === 'donate-modal') {
+            document.body.classList.remove('modal-open');
+        }
     };
 
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
@@ -524,20 +536,147 @@ function setupEventListeners(data) {
         }
     });
 
-    document.getElementById('main-donate-cms-btn').addEventListener('click', () => {
-        const link = data.settings?.donateMainUrl;
-        if(link) window.open(link, '_blank');
-        else window.location.href = '#donate';
-    });
+    const openDonateModal = (link) => {
+        ACTIVE_DONATE_LINK = link || data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '';
+        if (donateModal) {
+            donateModal.classList.remove('hidden');
+            requestAnimationFrame(() => donateModal.classList.add('opacity-100', 'flex'));
+            document.body.classList.add('modal-open');
+            // 스크롤 초기화 및 포커스 보정
+            setTimeout(() => {
+                const scroller = donateModal.querySelector('.donate-scroll');
+                if (scroller) scroller.scrollTop = 0;
+                const alignFocus = (el) => {
+                    if (!scroller || !el) return;
+                    const top = el.offsetTop - 24;
+                    scroller.scrollTo({ top: top < 0 ? 0 : top, behavior: 'smooth' });
+                };
+                donateModal.querySelectorAll(DONATE_FOCUS_SELECTOR).forEach(el => {
+                    el.removeEventListener('focus', el.__donateFocusHandler || (()=>{}));
+                    const handler = () => alignFocus(el);
+                    el.__donateFocusHandler = handler;
+                    el.addEventListener('focus', handler);
+                });
+            }, 50);
+        } else if (ACTIVE_DONATE_LINK) {
+            window.open(ACTIVE_DONATE_LINK, '_blank');
+        }
+    };
+
+    const mainDonateBtn = document.getElementById('main-donate-cms-btn');
+    if(mainDonateBtn) {
+        mainDonateBtn.addEventListener('click', () => {
+            openDonateModal(data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '');
+        });
+    }
+    const altDonateBtn = document.getElementById('alt-donate-btn');
+    if(altDonateBtn) {
+        altDonateBtn.addEventListener('click', () => {
+            openDonateModal(data.settings?.donateHappyUrl || data.settings?.donateMainUrl || '');
+        });
+    }
     
     document.getElementById('account-info-box').addEventListener('click', () => {
         const text = `${data.settings.accountBank} ${data.settings.accountNumber}`;
         navigator.clipboard.writeText(text).then(() => showToast('계좌번호가 복사되었습니다.'));
     });
 
+    if (donateForm) {
+        const fields = Array.from(donateForm.querySelectorAll('input[type="text"], input[type="tel"]'));
+        const terms = document.getElementById('donate-terms');
+
+        // 드래프트 복원
+        try {
+            const draft = JSON.parse(localStorage.getItem(DONATE_DRAFT_KEY) || '{}');
+            fields.forEach(f => { if(draft[f.name]) f.value = draft[f.name]; });
+            if (terms && draft.terms) terms.checked = true;
+        } catch {}
+
+        const saveDraft = () => {
+            const payload = {};
+            fields.forEach(f => payload[f.name] = f.value);
+            if (terms) payload.terms = terms.checked;
+            try { localStorage.setItem(DONATE_DRAFT_KEY, JSON.stringify(payload)); } catch {}
+        };
+        const validateDonate = () => {
+            const filled = fields.every(f => (f.value || '').trim().length > 0);
+            const ok = filled && terms && terms.checked;
+            if (donateSubmitBtn) {
+                donateSubmitBtn.disabled = !ok;
+            }
+        };
+        fields.forEach(f => f.addEventListener('input', () => { saveDraft(); validateDonate(); }));
+        if (terms) terms.addEventListener('change', () => { saveDraft(); validateDonate(); });
+        validateDonate();
+
+        donateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleLoading(donateSubmitBtn, true, '제출 중...');
+            const link = ACTIVE_DONATE_LINK || data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '';
+            if (!link) {
+                showToast('이동할 후원 URL이 설정되지 않았습니다.');
+                toggleLoading(donateSubmitBtn, false);
+                return;
+            }
+            // 제출 데이터 저장 (서버)
+            const payload = {};
+            const snapshot = donateFields.map((f,i)=>({
+                name: (f.name && f.name.trim()) ? f.name.trim() : `field_${i}`,
+                label: f.label || ''
+            }));
+            snapshot.forEach(s => {
+                const input = donateForm.querySelector(`[name="${s.name}"]`);
+                payload[s.name] = input ? input.value : '';
+            });
+            try {
+                const res = await fetch('/.netlify/functions/submit-donate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ form: payload, fieldsSnapshot: snapshot })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok || result.error) {
+                    showToast('신청 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    toggleLoading(donateSubmitBtn, false);
+                    return;
+                }
+                // 로컬에도 반영
+                data.settings.donateSubmissions = data.settings.donateSubmissions || [];
+                data.settings.donateSubmissions.unshift({
+                    form: payload,
+                    fieldsSnapshot: snapshot,
+                    timestamp: new Date().toISOString()
+                });
+                DataStore.save(data);
+                try {
+                    const fresh = await DataStore.loadRemote();
+                    if (fresh) {
+                        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: fresh }));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+                    }
+                } catch {
+                    window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+                }
+                showToast('신청이 접수되었습니다. 후원 페이지로 이동합니다.');
+                if (donateModal) closeModal('donate-modal');
+                // 토스트가 보일 시간을 준 뒤 이동
+                setTimeout(() => {
+                    window.open(link, '_blank');
+                }, 1200);
+            } catch (err) {
+                console.error('Donate submit failed', err);
+                showToast('신청 저장에 실패했습니다. 네트워크를 확인해주세요.');
+            } finally {
+                toggleLoading(donateSubmitBtn, false);
+            }
+        });
+    }
+
     document.addEventListener('keydown', (e) => {
         if(e.key === 'Escape') {
             closeModal('poster-modal');
+            closeModal('donate-modal');
         }
     });
 
@@ -802,6 +941,33 @@ function setupBackgroundAudio(url) {
         window.addEventListener('pointerdown', kickstart, { once: true });
         window.addEventListener('keydown', kickstart, { once: true });
     }
+}
+
+function renderDonateFormFields(data) {
+    const container = document.getElementById('donate-form-fields');
+    if (!container) return;
+    let draft = {};
+    try { draft = JSON.parse(localStorage.getItem('donate_form_draft') || '{}'); } catch {}
+    const fields = (data.settings?.donateFields || []).map((f,i) => ({
+        ...f,
+        _name: (f.name && f.name.trim()) ? f.name.trim() : `field_${i}`
+    }));
+    container.innerHTML = fields.map(f => `
+        <div>
+            <label class="text-xs text-gray-500">${sanitize(f.label || '')}</label>
+            <input type="${f._name === 'phone' ? 'tel' : 'text'}" name="${sanitize(f._name)}" placeholder="${sanitize(f.placeholder || '')}" class="w-full border rounded-lg p-3 bg-gray-50" ${f.required ? 'required' : ''} value="${sanitize(draft[f._name] || '')}">
+        </div>
+    `).join('');
+    // 약관 체크 복원
+    const terms = document.getElementById('donate-terms');
+    if (terms && draft.terms) terms.checked = true;
+}
+
+function applyDonateTerms(data) {
+    const box = document.getElementById('donate-terms-content');
+    if(!box) return;
+    const terms = data.settings?.donateTerms || '';
+    box.innerHTML = sanitize(terms || '캠페인 약관이 준비중입니다.').replace(/\n/g, '<br>');
 }
 
 function renderCharts(data) {

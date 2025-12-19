@@ -64,6 +64,14 @@ exports.handler = async (event) => {
             const { rows } = await pool.query('SELECT data FROM settings WHERE id = $1', ['main']);
             const row = rows[0];
             const base = row ? row.data : {};
+            // 이전에 settings 없이 상위에 저장된 donateSubmissions를 settings로 병합
+            if (Array.isArray(base.donateSubmissions)) {
+                base.settings = base.settings || {};
+                if (!Array.isArray(base.settings.donateSubmissions) || base.settings.donateSubmissions.length === 0) {
+                    base.settings.donateSubmissions = base.donateSubmissions;
+                }
+                delete base.donateSubmissions;
+            }
             return respond(200, base);
         } catch (err) {
             console.error('GET failed', err);

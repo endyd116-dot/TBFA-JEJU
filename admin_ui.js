@@ -145,23 +145,27 @@ export const AdminUI = {
     },
 
     renderDashboard(tab) {
-        const data = DataStore.get();
         const container = document.getElementById('admin-content-area');
         document.getElementById('admin-header-title').textContent = tab.toUpperCase();
-        container.innerHTML = '';
-        
-        if(tab === 'donation') this.renderDonationMgr(container, data);
-        else if(tab === 'budget') this.renderBudgetMgr(container, data);
-        else if(tab === 'community') this.renderCommunityMgr(container, data);
-        else if(tab === 'flow') this.renderFlowMgr(container, data);
-        else if(tab === 'stats') this.renderStats(container, data);
-        else if(tab === 'settings') this.renderSettings(container, data);
-        else if(tab === 'posters') this.renderPosterMgr(container, data);
-        else if(tab === 'resources') this.renderResourcesMgr(container, data);
-        else if(tab === 'signResources') this.renderSignResourcesMgr(container, data);
-        else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
-        
-        if(window.lucide) lucide.createIcons();
+        window.__admin_active_tab = tab;
+        const renderWith = (data) => {
+            container.innerHTML = '';
+            if(tab === 'donation') this.renderDonationMgr(container, data);
+            else if(tab === 'budget') this.renderBudgetMgr(container, data);
+            else if(tab === 'community') this.renderCommunityMgr(container, data);
+            else if(tab === 'flow') this.renderFlowMgr(container, data);
+            else if(tab === 'stats') this.renderStats(container, data);
+            else if(tab === 'settings') this.renderSettings(container, data);
+            else if(tab === 'posters') this.renderPosterMgr(container, data);
+            else if(tab === 'resources') this.renderResourcesMgr(container, data);
+            else if(tab === 'signResources') this.renderSignResourcesMgr(container, data);
+            else if(tab === 'donateJoin') this.renderDonateJoinMgr(container, data);
+            else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
+            if(window.lucide) lucide.createIcons();
+        };
+
+        // 로컬 데이터 기준 렌더 (자동 재로딩으로 입력이 초기화되는 것을 방지)
+        renderWith(DataStore.get());
     },
     renderDonationMgr(container, data) {
         let editingIndex = null;
@@ -1711,6 +1715,134 @@ th { background: #f3f4f6; text-align: left; }
         
         window.approveMsg = (i) => { data.comments[i].approved = true; DataStore.save(data); this.renderDashboard('community'); };
         window.delMsg = (i) => { data.comments.splice(i,1); DataStore.save(data); this.renderDashboard('community'); };
+        if(window.lucide) lucide.createIcons();
+    },
+    renderDonateJoinMgr(container, data) {
+        const fields = data.settings?.donateFields || [];
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4 text-primary"></i><h3 class="font-bold">후원 가입 관리</h3></div>
+                    <button type="button" id="add-donate-field" class="border border-primary text-primary px-3 py-1 rounded text-sm">필드 추가</button>
+                </div>
+                <div class="space-y-3 bg-gray-50 border rounded-xl p-3">
+                    <div class="flex items-center gap-2 text-sm font-bold text-gray-700"><i data-lucide="file-text" class="w-4 h-4 text-primary"></i>약관 내용</div>
+                    <textarea id="donate-terms-edit" class="w-full border rounded-lg p-3 text-sm min-h-[120px]" placeholder="캠페인 약관을 입력하세요.">${sanitize(data.settings?.donateTerms || '')}</textarea>
+                </div>
+                <div class="space-y-3" id="donate-field-list">
+                    ${fields.length === 0 ? `<div class="text-center text-gray-400 py-6 text-sm">필드가 없습니다.</div>` : fields.map((f,i)=>`
+                        <div class="border rounded-xl p-3 flex flex-col md:flex-row gap-3 items-start md:items-center">
+                            <div class="flex-1 w-full">
+                                <label class="text-[11px] text-gray-500">레이블</label>
+                                <input type="text" id="donate-field-label-${i}" value="${sanitize(f.label || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div class="flex-1 w-full">
+                                <label class="text-[11px] text-gray-500">placeholder</label>
+                                <input type="text" id="donate-field-placeholder-${i}" value="${sanitize(f.placeholder || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div class="w-40">
+                                <label class="text-[11px] text-gray-500">name</label>
+                                <input type="text" id="donate-field-name-${i}" value="${sanitize(f.name || '')}" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <label class="flex items-center gap-2 text-xs text-gray-600 mt-1">
+                                <input type="checkbox" id="donate-field-required-${i}" ${f.required ? 'checked' : ''} class="rounded border-gray-300">
+                                필수
+                            </label>
+                            <button class="text-red-500 text-xs border border-red-200 px-2 py-1 rounded" onclick="window.delDonateField(${i})">삭제</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="save-donate-fields" class="bg-primary text-white px-4 py-2 rounded font-bold">저장</button>
+                </div>
+            </div>
+        `;
+        const adminToast = (msg) => {
+            let t = document.getElementById('admin-panel-toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'admin-panel-toast';
+                t.className = 'fixed top-6 right-6 z-[12000] bg-gray-900 text-white px-4 py-2 rounded shadow-lg transition-all';
+                t.style.opacity = '0';
+                t.style.transform = 'translateY(-8px)';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            requestAnimationFrame(() => {
+                t.style.opacity = '1';
+                t.style.transform = 'translateY(0)';
+            });
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translateY(-8px)';
+            }, 1600);
+        };
+
+        const collectFields = () => {
+            const list = data.settings.donateFields || [];
+            for(let i=0;i<list.length;i++){
+                list[i].label = document.getElementById(`donate-field-label-${i}`).value;
+                list[i].placeholder = document.getElementById(`donate-field-placeholder-${i}`).value;
+                list[i].name = document.getElementById(`donate-field-name-${i}`).value || `field_${i}`;
+                list[i].required = document.getElementById(`donate-field-required-${i}`).checked;
+            }
+            return list;
+        };
+
+        document.getElementById('add-donate-field').onclick = () => {
+            const current = collectFields();
+            current.push({ label:'', name:'', placeholder:'', required:false });
+            data.settings.donateFields = current;
+            DataStore.save(data);
+            this.renderDashboard('donateJoin');
+            adminToast('후원 가입 필드가 추가되었습니다.');
+        };
+        window.delDonateField = (idx) => {
+            const current = collectFields().filter((_,i)=>i!==idx);
+            data.settings.donateFields = current;
+            DataStore.save(data);
+            this.renderDashboard('donateJoin');
+            adminToast('후원 가입 필드가 삭제되었습니다.');
+        };
+        document.getElementById('save-donate-fields').onclick = () => {
+            const list = collectFields();
+            data.settings.donateFields = list;
+            data.settings.donateTerms = document.getElementById('donate-terms-edit').value || '';
+            DataStore.save(data);
+            adminToast('후원 가입 필드가 저장되었습니다.');
+        };
+        const subs = data.settings?.donateSubmissions || [];
+        const subWrap = document.createElement('div');
+        const renderSubs = () => {
+            if (subs.length === 0) return '<div class="text-center text-gray-400 py-4 text-sm">아직 신청이 없습니다.</div>';
+            return `
+            <div class="max-h-72 overflow-y-auto border rounded-xl divide-y">
+                ${subs.map(s => {
+                    const ts = s.timestamp ? new Date(s.timestamp) : null;
+                    const time = ts && !isNaN(ts) ? ts.toLocaleString('ko-KR') : '';
+                    const snapshot = Array.isArray(s.fieldsSnapshot) ? s.fieldsSnapshot : [];
+                    const entries = snapshot.length
+                        ? snapshot
+                        : Object.keys(s.form || {}).map((k)=>({ name:k, label:k }));
+                    return `<div class="p-3">
+                        <div class="text-xs text-gray-500 mb-2">${time}</div>
+                        <div class="grid md:grid-cols-2 gap-2 text-sm">
+                            ${entries.map(field => {
+                                const val = s.form ? (s.form[field.name] || '') : (s[field.name] || '');
+                                return `<div><span class="font-semibold text-gray-700">${sanitize(field.label || field.name)}:</span> ${sanitize(val)}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        };
+        subWrap.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm space-y-3 mt-4">
+                <div class="flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">신청 내역</h4></div>
+                ${renderSubs()}
+            </div>
+        `;
+        container.appendChild(subWrap.firstElementChild);
         if(window.lucide) lucide.createIcons();
     },
     renderStats(container) {

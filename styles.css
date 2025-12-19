@@ -69,6 +69,20 @@
     }
 }
 
+/* 모바일 입력 포커스 시 키보드로 인한 튐 완화 */
+#donate-modal input[type="text"],
+#donate-modal input[type="tel"],
+#donate-modal textarea {
+    font-size: 16px;
+    touch-action: manipulation;
+    min-height: 44px;
+}
+
+/* 모달 오픈 시 바디 스크롤 방지 */
+body.modal-open {
+    overflow: hidden;
+}
+
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }

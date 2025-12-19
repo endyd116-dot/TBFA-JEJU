@@ -105,6 +105,14 @@ export const DataStore = {
                 shareLinks: [
                     { label: "네이버 블로그", url: "https://blog.naver.com" }
                 ],
+                donateTerms: "캠페인 약관 내용을 입력해주세요.\\n예) 후원금은 전액 유가족 지원에 사용됩니다.",
+                donateFields: [
+                    { label: '본인 소속 학교', name: 'school', placeholder: '예: 서울 강서구 화곡동 아림 초등학교', required: true },
+                    { label: '기타 본인 소속 단체', name: 'org', placeholder: '예: 서울교사노조 / 고인 지인', required: true },
+                    { label: '본인 성함', name: 'name', placeholder: '예: 민달래', required: true },
+                    { label: '연락처', name: 'phone', placeholder: '예: 010-xxxx-xxxx', required: true },
+                    { label: '접속 경로', name: 'source', placeholder: '예: 서울교사노조 알림 문자', required: true }
+                ],
                 petitionFormUrl: "",
                 petitionEmail: "",
                 smtpHost: "",
@@ -115,7 +123,8 @@ export const DataStore = {
                 donateMainUrl: "",
                 donateKakaoUrl: "https://qr.kakaopay.com/Ej8e5jZ",
                 donateHappyUrl: "https://happybean.naver.com",
-                donateImage: ""
+                donateImage: "",
+                donateSubmissions: []
             },
             flowTexts: {
                 storyTitle: "우리가 기억해야 할 이야기",
