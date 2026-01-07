@@ -1,15 +1,20 @@
+import { showToast } from './utils.js';
+
 export const DataStore = {
     _cache: null,
+    _remoteReady: false,
     get() {
         return this._cache || this.init();
     },
     async loadRemote() {
         const existing = this._cache;
+        this._remoteReady = false;
 
         try {
             const res = await fetch('/.netlify/functions/data', { cache: 'no-store' });
             if (!res.ok) throw new Error('remote fetch failed');
             const remote = await res.json();
+            this._remoteReady = true;
             if (remote && remote.hero && remote.settings) {
                 this._cache = remote;
                 return remote;
@@ -26,6 +31,10 @@ export const DataStore = {
         // try to persist remotely if admin token present
         const token = sessionStorage.getItem('tbfa_admin_token') || '';
         if (token) {
+            if (!this._remoteReady) {
+                showToast('원격 데이터 로드에 실패해 저장을 막았습니다. 새로고침 후 다시 시도해주세요.');
+                return;
+            }
             fetch('/.netlify/functions/data', {
                 method: 'POST',
                 headers: {
@@ -49,9 +58,11 @@ export const DataStore = {
     },
     reset() {
         this._cache = null;
+        this._remoteReady = false;
         return this.init();
     },
     init() {
+        this._remoteReady = false;
         const defaultData = {
             hero: {
                 title: "선생님의 명예 회복과<br>남겨진 가족을 위해",
@@ -124,7 +135,11 @@ export const DataStore = {
                 donateKakaoUrl: "https://qr.kakaopay.com/Ej8e5jZ",
                 donateHappyUrl: "https://happybean.naver.com",
                 donateImage: "",
-                donateSubmissions: []
+                donateSubmissions: [],
+                footerModals: [
+                    { title: "교사유가족협의회 고유번호증", blocks: [] },
+                    { title: "개인정보 처리방침 문서 보기", blocks: [] }
+                ]
             },
             flowTexts: {
                 storyTitle: "우리가 기억해야 할 이야기",

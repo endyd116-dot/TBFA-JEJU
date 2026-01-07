@@ -16,7 +16,58 @@ let isAudioMuted = true;
 const BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 let CURRENT_DATA = null;
 let ACTIVE_DONATE_LINK = '';
+let ACTIVE_DONATE_TYPE = 'regular';
 const DONATE_FOCUS_SELECTOR = '#donate-modal input, #donate-modal textarea';
+
+const copyText = async (text, allowFallback = true) => {
+    if (!text) return false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+    if (!allowFallback) return false;
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    let ok = false;
+    try {
+        ok = document.execCommand('copy');
+    } catch (err) {
+        ok = false;
+    }
+    document.body.removeChild(textarea);
+    return ok;
+};
+
+const updateAccountVisibility = (isAuthed) => {
+    const accPlaceholder = document.getElementById('acc-placeholder');
+    const accDetails = document.getElementById('acc-details');
+    if (!accPlaceholder || !accDetails) return;
+    const data = CURRENT_DATA || DataStore.get();
+    const bank = data?.settings?.accountBank || '';
+    const number = data?.settings?.accountNumber || '';
+    if (isAuthed) {
+        accPlaceholder.textContent = `${bank} ${number}`.trim();
+        accPlaceholder.classList.remove('text-sm', 'text-gray-500');
+        accPlaceholder.classList.add('text-lg', 'md:text-xl', 'text-gray-800', 'font-bold');
+        accPlaceholder.classList.remove('hidden');
+        accPlaceholder.style.display = 'inline';
+        accDetails.classList.add('hidden');
+        accDetails.style.display = 'none';
+    } else {
+        accPlaceholder.textContent = '정기,일시 후원회원 버튼을 눌러주세요';
+        accPlaceholder.classList.remove('text-lg', 'md:text-xl', 'text-gray-800', 'font-bold');
+        accPlaceholder.classList.add('text-sm', 'text-gray-500');
+        accPlaceholder.classList.remove('hidden');
+        accPlaceholder.style.display = 'inline';
+        accDetails.classList.add('hidden');
+        accDetails.style.display = 'none';
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     const latest = await DataStore.loadRemote();
@@ -83,6 +134,42 @@ function renderContent(data) {
     const emailLink = document.getElementById('footer-email-link');
     if(emailEl) emailEl.textContent = data.settings.footerEmail || '';
     if(emailLink) emailLink.href = `mailto:${data.settings.footerEmail || ''}`;
+
+    const footerModals = Array.isArray(data.settings?.footerModals) ? data.settings.footerModals : [];
+    [0, 1].forEach((idx) => {
+        const btn = document.getElementById(`footer-modal-btn-${idx}`);
+        if (btn) btn.classList.add('hidden');
+    });
+    footerModals.forEach((modal, idx) => {
+        const title = modal?.title || `푸터 모달 ${idx + 1}`;
+        const btn = document.getElementById(`footer-modal-btn-${idx}`);
+        const titleEl = document.getElementById(`footer-modal-title-${idx}`);
+        const bodyEl = document.getElementById(`footer-modal-body-${idx}`);
+        const blocks = Array.isArray(modal?.blocks) ? modal.blocks : [];
+        const hasContent = blocks.some((block) => {
+            if (!block || !block.type) return false;
+            const value = (block.value || '').trim();
+            return value.length > 0;
+        });
+        if (btn) {
+            btn.textContent = title;
+            btn.classList.toggle('hidden', !hasContent);
+        }
+        if (titleEl) titleEl.textContent = title;
+        if (bodyEl) {
+            const html = blocks.map((block) => {
+                if (!block || !block.type) return '';
+                if (block.type === 'html') {
+                    return `<div class="mb-3">${sanitize(block.value || '')}</div>`;
+                }
+                if (block.type === 'image' && block.value) {
+                    return `<div class="mb-3"><img src="${sanitize(block.value)}" alt="footer modal image" class="w-full rounded-xl"></div>`;
+                }
+                return '';
+            }).join('');
+            bodyEl.innerHTML = html || '<div class="text-sm text-gray-400">표시할 내용이 없습니다.</div>';
+        }
+    });
     
 
     const current = Number(data.settings.baseAmount || 0);
@@ -100,6 +187,8 @@ function renderContent(data) {
     document.getElementById('acc-owner').textContent = data.settings.accountOwner;
     document.getElementById('acc-bank').textContent = data.settings.accountBank;
     document.getElementById('acc-number').textContent = data.settings.accountNumber;
+    const donateAuthOk = sessionStorage.getItem('tbfa_donate_auth_ok') === 'true';
+    updateAccountVisibility(donateAuthOk);
 
 
     const donorList = document.getElementById('donor-list-display');
@@ -140,7 +229,16 @@ function renderContent(data) {
 
 
     const commentList = document.getElementById('comments-list');
-    const approvedComments = data.comments.filter(c => c.approved);
+    const limit = Number(data.settings?.commentsDisplayLimit || 0) || 0;
+    const approvedComments = data.comments
+        .filter(c => c.approved)
+        .slice()
+        .sort((a, b) => {
+            const ta = new Date(a.timestamp || a.date || a.time || 0).getTime();
+            const tb = new Date(b.timestamp || b.date || b.time || 0).getTime();
+            return tb - ta;
+        })
+        .slice(0, limit > 0 ? limit : undefined);
     renderComments(approvedComments, commentList);
 
 
@@ -181,6 +279,17 @@ function setupEventListeners(data) {
         });
     });
 
+    [0, 1].forEach((idx) => {
+        const btn = document.getElementById(`footer-modal-btn-${idx}`);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const modal = document.getElementById(`footer-modal-${idx}`);
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('opacity-100'), 10);
+        });
+    });
+
 
     document.getElementById('footer-login-trigger').addEventListener('click', () => {
         const modal = document.getElementById('admin-modal');
@@ -190,10 +299,25 @@ function setupEventListeners(data) {
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = document.getElementById('login-submit-btn');
+        const spinner = submitBtn?.querySelector('.login-btn-spinner');
+        const label = submitBtn?.querySelector('.login-btn-text');
+        if (submitBtn) submitBtn.disabled = true;
+        if (spinner) spinner.classList.remove('hidden');
+        if (label) label.textContent = '로그인 중...';
         const id = document.getElementById('admin-id').value;
         const pw = document.getElementById('admin-pw').value;
         
-        const ok = await Auth.login(id, pw);
+        let ok = false;
+        try {
+            ok = await Auth.login(id, pw);
+        } finally {
+            if (!ok) {
+                if (submitBtn) submitBtn.disabled = false;
+                if (spinner) spinner.classList.add('hidden');
+                if (label) label.textContent = '로그인';
+            }
+        }
         
         if(ok) {
             // 최신 DB 데이터로 동기화 후 관리자 UI 렌더
@@ -207,6 +331,9 @@ function setupEventListeners(data) {
             document.getElementById('admin-dashboard').classList.remove('hidden');
             AdminUI.init();
             AdminUI.renderDashboard('donation'); // Default tab
+            if (submitBtn) submitBtn.disabled = false;
+            if (spinner) spinner.classList.add('hidden');
+            if (label) label.textContent = '로그인';
         } else {
             const err = document.getElementById('login-error');
             err.classList.remove('hidden');
@@ -536,8 +663,11 @@ function setupEventListeners(data) {
         }
     });
 
-    const openDonateModal = (link) => {
+    const openDonateModal = (link, type = 'regular') => {
         ACTIVE_DONATE_LINK = link || data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '';
+        ACTIVE_DONATE_TYPE = type;
+        sessionStorage.setItem('tbfa_donate_auth_ok', 'false');
+        updateAccountVisibility(false);
         if (donateModal) {
             donateModal.classList.remove('hidden');
             requestAnimationFrame(() => donateModal.classList.add('opacity-100', 'flex'));
@@ -566,19 +696,27 @@ function setupEventListeners(data) {
     const mainDonateBtn = document.getElementById('main-donate-cms-btn');
     if(mainDonateBtn) {
         mainDonateBtn.addEventListener('click', () => {
-            openDonateModal(data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '');
+            openDonateModal(data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '', 'regular');
         });
     }
     const altDonateBtn = document.getElementById('alt-donate-btn');
     if(altDonateBtn) {
         altDonateBtn.addEventListener('click', () => {
-            openDonateModal(data.settings?.donateHappyUrl || data.settings?.donateMainUrl || '');
+            openDonateModal(data.settings?.donateHappyUrl || data.settings?.donateMainUrl || '', 'one-time');
         });
     }
     
     document.getElementById('account-info-box').addEventListener('click', () => {
+        const donateAuthOk = sessionStorage.getItem('tbfa_donate_auth_ok') === 'true';
+        if (!donateAuthOk) {
+            showToast('인증후에 계좌 열람이 가능합니다.');
+            return;
+        }
         const text = `${data.settings.accountBank} ${data.settings.accountNumber}`;
-        navigator.clipboard.writeText(text).then(() => showToast('계좌번호가 복사되었습니다.'));
+        copyText(text).then((ok) => {
+            if (ok) showToast('계좌번호가 복사되었습니다.');
+            else showToast('계좌 복사에 실패했습니다.');
+        });
     });
 
     if (donateForm) {
@@ -611,6 +749,8 @@ function setupEventListeners(data) {
 
         donateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            sessionStorage.setItem('tbfa_donate_auth_ok', 'false');
+            updateAccountVisibility(false);
             toggleLoading(donateSubmitBtn, true, '제출 중...');
             const link = ACTIVE_DONATE_LINK || data.settings?.donateMainUrl || data.settings?.donateHappyUrl || '';
             if (!link) {
@@ -648,24 +788,32 @@ function setupEventListeners(data) {
                     timestamp: new Date().toISOString()
                 });
                 DataStore.save(data);
-                try {
-                    const fresh = await DataStore.loadRemote();
-                    if (fresh) {
-                        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: fresh }));
-                    } else {
-                        window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
-                    }
-                } catch {
-                    window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
-                }
-                showToast('신청이 접수되었습니다. 후원 페이지로 이동합니다.');
+                window.dispatchEvent(new CustomEvent('dataUpdated', { detail: data }));
+                sessionStorage.setItem('tbfa_donate_auth_ok', 'true');
+                updateAccountVisibility(true);
                 if (donateModal) closeModal('donate-modal');
-                // 토스트가 보일 시간을 준 뒤 이동
-                setTimeout(() => {
-                    window.open(link, '_blank');
-                }, 1200);
+                if (ACTIVE_DONATE_TYPE === 'one-time') {
+                    const modal = document.getElementById('one-time-confirm-modal');
+                    const accountText = document.getElementById('one-time-account-text');
+                    if (accountText) {
+                        accountText.textContent = `${data.settings.accountBank} ${data.settings.accountNumber}`.trim();
+                    }
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        setTimeout(() => modal.classList.add('opacity-100'), 10);
+                    }
+                    showToast('계좌 복사 버튼을 눌러 복사해주세요.');
+                } else {
+                    showToast('신청이 접수되었습니다. 후원 페이지로 이동합니다.');
+                    // 토스트가 보일 시간을 준 뒤 이동
+                    setTimeout(() => {
+                        window.open(link, '_blank');
+                    }, 1200);
+                }
             } catch (err) {
                 console.error('Donate submit failed', err);
+                sessionStorage.setItem('tbfa_donate_auth_ok', 'false');
+                updateAccountVisibility(false);
                 showToast('신청 저장에 실패했습니다. 네트워크를 확인해주세요.');
             } finally {
                 toggleLoading(donateSubmitBtn, false);
@@ -699,6 +847,30 @@ function setupEventListeners(data) {
             btn.onclick = () => window.open(url, '_blank');
         }
     };
+
+    const oneTimeCopyBtn = document.getElementById('one-time-copy-btn');
+    if (oneTimeCopyBtn) {
+        oneTimeCopyBtn.addEventListener('click', () => {
+            const data = CURRENT_DATA || DataStore.get();
+            const text = `${data.settings.accountBank} ${data.settings.accountNumber}`.trim();
+            copyText(text).then((ok) => {
+                if (ok) showToast('계좌번호가 복사되었습니다.');
+                else showToast('계좌 복사에 실패했습니다.');
+            });
+        });
+    }
+    const oneTimeNextBtn = document.getElementById('one-time-next-btn');
+    if (oneTimeNextBtn) {
+        oneTimeNextBtn.addEventListener('click', () => {
+            const link = ACTIVE_DONATE_LINK || data.settings?.donateHappyUrl || data.settings?.donateMainUrl || '';
+            if (!link) {
+                showToast('이동할 후원 URL이 설정되지 않았습니다.');
+                return;
+            }
+            window.open(link, '_blank');
+            closeModal('one-time-confirm-modal');
+        });
+    }
 
     window.openResource = (idx) => {
         const data = CURRENT_DATA || DataStore.get();
@@ -1143,12 +1315,7 @@ function renderComments(approvedComments, container) {
 
     const renderPage = (page) => {
         const start = page * pageSize;
-        // 항상 4개가 보이도록, 남은 아이템이 부족하면 처음부터 이어서 채움
-        const slice = [];
-        for (let i = 0; i < pageSize; i++) {
-            const idx = (start + i) % approvedComments.length;
-            slice.push(approvedComments[idx]);
-        }
+        const slice = approvedComments.slice(start, start + pageSize);
         container.style.opacity = '0';
         container.style.transform = 'translateY(8px)';
         setTimeout(() => {
@@ -1160,7 +1327,12 @@ function renderComments(approvedComments, container) {
             container.innerHTML = slice.map(c => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <p class="text-gray-800 mb-2 leading-relaxed">${sanitize(c.text)}</p>
-                    <div class="flex justify-between items-center text-xs text-gray-400">
+                    ${c.reply && c.reply.text ? `
+                        <div class="mt-2 border-l-4 border-gray-200 pl-3 py-2 bg-gray-50 rounded">
+                            <div class="text-xs font-bold text-gray-600 mb-1">관리자 답변</div>
+                            <div class="text-sm text-gray-700 whitespace-pre-line">${sanitize(c.reply.text)}</div>
+                        </div>` : ''}
+                    <div class="flex justify-between items-center text-xs text-gray-400 mt-2">
                         <span class="font-bold text-gray-600">${sanitize(c.author)}</span>
                         <span>${formatDate(c)}</span>
                     </div>
@@ -1176,11 +1348,113 @@ function renderComments(approvedComments, container) {
     commentPage = 0;
     renderPage(commentPage);
 
-    if(approvedComments.length > pageSize) {
-        commentTimer = setInterval(() => {
-            commentPage = (commentPage + 1) % pages;
+    const firstBtn = document.getElementById('comments-first');
+    const prevBtn = document.getElementById('comments-prev');
+    const nextBtn = document.getElementById('comments-next');
+    const lastBtn = document.getElementById('comments-last');
+    const pagination = document.getElementById('comments-pagination');
+    const renderPagination = () => {
+        if (!pagination) return;
+        pagination.innerHTML = '';
+        if (pages <= 1) return;
+        const middleCount = 5;
+        const addPageBtn = (page) => {
+            const btn = document.createElement('button');
+            btn.textContent = String(page);
+            btn.className = 'border border-gray-300 px-2 py-1 rounded hover:bg-gray-50';
+            if (page - 1 === commentPage) {
+                btn.classList.add('bg-gray-100', 'text-gray-800');
+            }
+            btn.addEventListener('click', () => {
+                if (commentPage === page - 1) return;
+                commentPage = page - 1;
+                renderPage(commentPage);
+                updateControls();
+            });
+            pagination.appendChild(btn);
+        };
+        const addEllipsis = () => {
+            const span = document.createElement('span');
+            span.textContent = '...';
+            span.className = 'px-1 text-gray-400';
+            pagination.appendChild(span);
+        };
+        if (pages <= middleCount + 2) {
+            for (let p = 1; p <= pages; p++) addPageBtn(p);
+            return;
+        }
+        addPageBtn(1);
+        let start = Math.max(2, (commentPage + 1) - Math.floor(middleCount / 2));
+        let end = start + middleCount - 1;
+        if (end > pages - 1) {
+            end = pages - 1;
+            start = Math.max(2, end - middleCount + 1);
+        }
+        if (start > 2) addEllipsis();
+        for (let p = start; p <= end; p++) addPageBtn(p);
+        if (end < pages - 1) addEllipsis();
+        addPageBtn(pages);
+    };
+    const updateControls = () => {
+        renderPagination();
+        const atStart = commentPage === 0;
+        const hasPages = pages > 1;
+        if (prevBtn) {
+            prevBtn.disabled = atStart;
+            prevBtn.classList.toggle('opacity-40', atStart);
+            prevBtn.classList.toggle('cursor-not-allowed', atStart);
+        }
+        if (firstBtn) {
+            firstBtn.disabled = atStart;
+            firstBtn.classList.toggle('opacity-40', atStart);
+            firstBtn.classList.toggle('cursor-not-allowed', atStart);
+        }
+        if (nextBtn) {
+            nextBtn.disabled = !hasPages;
+            nextBtn.classList.toggle('opacity-40', !hasPages);
+            nextBtn.classList.toggle('cursor-not-allowed', !hasPages);
+        }
+        if (lastBtn) {
+            lastBtn.disabled = !hasPages;
+            lastBtn.classList.toggle('opacity-40', !hasPages);
+            lastBtn.classList.toggle('cursor-not-allowed', !hasPages);
+        }
+    };
+    updateControls();
+    if (firstBtn) {
+        firstBtn.onclick = () => {
+            if (commentPage === 0) return;
+            commentPage = 0;
             renderPage(commentPage);
-        }, 5000);
+            updateControls();
+        };
+    }
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (commentPage === 0) return;
+            commentPage -= 1;
+            renderPage(commentPage);
+            updateControls();
+        };
+    }
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (commentPage >= pages - 1) {
+                commentPage = 0;
+            } else {
+                commentPage += 1;
+            }
+            renderPage(commentPage);
+            updateControls();
+        };
+    }
+    if (lastBtn) {
+        lastBtn.onclick = () => {
+            if (commentPage === pages - 1) return;
+            commentPage = pages - 1;
+            renderPage(commentPage);
+            updateControls();
+        };
     }
 }
 
@@ -1239,9 +1513,15 @@ function applySectionOrder(order) {
 }
 const toggleLoading = (btn, loading, label) => {
     if (!btn) return;
+    const createSpinner = () => {
+        const spinner = document.createElement('span');
+        spinner.className = 'inline-block w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin';
+        return spinner;
+    };
     if (loading) {
         btn.dataset.originalText = btn.textContent;
-        btn.textContent = label || '처리 중...';
+        btn.textContent = '';
+        btn.append(createSpinner(), document.createTextNode(` ${label || '처리 중...'}`));
         btn.disabled = true;
         btn.classList.add('opacity-70', 'cursor-not-allowed');
     } else {

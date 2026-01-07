@@ -148,6 +148,14 @@ export const AdminUI = {
         const container = document.getElementById('admin-content-area');
         document.getElementById('admin-header-title').textContent = tab.toUpperCase();
         window.__admin_active_tab = tab;
+        const tabButtons = document.querySelectorAll('.admin-tab-btn');
+        tabButtons.forEach(btn => {
+            if (btn.dataset.tab === tab) {
+                btn.classList.add('bg-gray-50', 'text-primary');
+            } else {
+                btn.classList.remove('bg-gray-50', 'text-primary');
+            }
+        });
         const renderWith = (data) => {
             container.innerHTML = '';
             if(tab === 'donation') this.renderDonationMgr(container, data);
@@ -159,6 +167,8 @@ export const AdminUI = {
             else if(tab === 'posters') this.renderPosterMgr(container, data);
             else if(tab === 'resources') this.renderResourcesMgr(container, data);
             else if(tab === 'signResources') this.renderSignResourcesMgr(container, data);
+            else if(tab === 'signList') this.renderSignListMgr(container, data);
+            else if(tab === 'footerModals') this.renderFooterModalMgr(container, data);
             else if(tab === 'donateJoin') this.renderDonateJoinMgr(container, data);
             else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
             if(window.lucide) lucide.createIcons();
@@ -432,6 +442,58 @@ export const AdminUI = {
     renderFlowMgr(container, data) {
         const petitions = data.petitions || [];
         const signatures = data.signatures || [];
+        const signPageSize = 15;
+        if (this.signPage == null) this.signPage = 0;
+        if (this.signQuery == null) this.signQuery = '';
+        const getSignListMeta = () => {
+            const signQuery = this.signQuery.trim().toLowerCase();
+            const signList = signatures.map((s, i) => ({ s, i })).reverse();
+            const filteredSignList = signQuery
+                ? signList.filter(({ s }) => (s.name || '').toLowerCase().includes(signQuery))
+                : signList;
+            const totalSignPages = Math.max(1, Math.ceil(filteredSignList.length / signPageSize));
+            if (this.signPage > totalSignPages - 1) this.signPage = totalSignPages - 1;
+            const signStart = this.signPage * signPageSize;
+            const signPageItems = filteredSignList.slice(signStart, signStart + signPageSize);
+            return { filteredSignList, totalSignPages, signPageItems };
+        };
+        const renderSignListTable = () => {
+            const { filteredSignList, totalSignPages, signPageItems } = getSignListMeta();
+            return `
+                ${filteredSignList.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">검색 결과가 없습니다.</div>` : `
+                <table class="min-w-full text-left text-sm">
+                    <thead class="text-xs text-gray-500 border-b">
+                        <tr>
+                            <th class="py-2 px-2">성명</th>
+                            <th class="py-2 px-2">연락처</th>
+                            <th class="py-2 px-2">주민번호(앞 6)</th>
+                            <th class="py-2 px-2">서명</th>
+                            <th class="py-2 px-2">시간</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${signPageItems.map(({s,i}) => {
+                            const dt = s.timestamp ? new Date(s.timestamp) : null;
+                            const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                            return `<tr>
+                                <td class="py-2 px-2">${sanitize(s.name)}</td>
+                                <td class="py-2 px-2">${sanitize(s.phone)}</td>
+                                <td class="py-2 px-2">${sanitize(s.ssn)}</td>
+                                <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
+                                <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                    <span>페이지 ${this.signPage + 1} / ${totalSignPages} (15개씩)</span>
+                    <div class="flex items-center gap-1">
+                        <button class="border border-gray-300 px-2 py-1 rounded ${this.signPage === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}" onclick="window.setSignPage(${this.signPage - 1})" ${this.signPage === 0 ? 'disabled' : ''}>이전</button>
+                        <button class="border border-gray-300 px-2 py-1 rounded ${this.signPage >= totalSignPages - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}" onclick="window.setSignPage(${this.signPage + 1})" ${this.signPage >= totalSignPages - 1 ? 'disabled' : ''}>다음</button>
+                    </div>
+                </div>`}
+            `;
+        };
         const sectionsMeta = [
             { id: 'hero', name: '타이틀' },
             { id: 'story', name: '우리가 기억해야 할 이야기' },
@@ -775,33 +837,14 @@ export const AdminUI = {
                                     <button id="export-signatures" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
                                 </div>
                             </div>
+                            <div class="flex items-center justify-end">
+                                <button id="goto-sign-list" class="border border-gray-300 px-2 py-1 rounded text-xs text-gray-700 hover:bg-gray-50">서명리스트 관리로 이동</button>
+                            </div>
                             <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
                             <div class="overflow-x-auto">
-                                ${signatures.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">아직 서명이 없습니다.</div>` : `
-                                <table class="min-w-full text-left text-sm">
-                                    <thead class="text-xs text-gray-500 border-b">
-                                        <tr>
-                                            <th class="py-2 px-2">성명</th>
-                                            <th class="py-2 px-2">연락처</th>
-                                            <th class="py-2 px-2">주민번호(앞 6)</th>
-                                            <th class="py-2 px-2">서명</th>
-                                            <th class="py-2 px-2">시간</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y">
-                                        ${signatures.map((s,i)=>({s,i})).reverse().map(({s,i}) => {
-                                            const dt = s.timestamp ? new Date(s.timestamp) : null;
-                                            const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
-                                            return `<tr>
-                                                <td class="py-2 px-2">${sanitize(s.name)}</td>
-                                                <td class="py-2 px-2">${sanitize(s.phone)}</td>
-                                                <td class="py-2 px-2">${sanitize(s.ssn)}</td>
-                                                <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
-                                                <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
-                                            </tr>`;
-                                        }).join('')}
-                                    </tbody>
-                                </table>`}
+                                <div id="flow-sign-list-wrap">
+                                    ${renderSignListTable()}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -868,6 +911,9 @@ export const AdminUI = {
                                 <input id="edit-footer-email" value="${sanitize(data.settings.footerEmail || '')}" class="w-full border p-2 rounded text-sm">
                             </div>
                         </div>
+                        <div class="flex justify-end">
+                            <button id="goto-footer-modals" class="border border-gray-300 px-3 py-1.5 rounded text-xs text-gray-700 hover:bg-gray-50">푸터 모달관리 바로가기</button>
+                        </div>
                     </div>
 
                     <button id="save-flow" class="w-full bg-primary text-white py-3 rounded-lg font-bold">저장하기</button>
@@ -891,6 +937,29 @@ export const AdminUI = {
             const safeSrc = item.signData.replace(/"/g,'&quot;');
             win.document.write(`<html><head><title>서명보기</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#f8fafc;"><img src="${safeSrc}" style="max-width:100%;max-height:100vh;"/></body></html>`);
         };
+        window.setSignPage = (next) => {
+            const list = (data.signatures || []).map((s, i) => ({ s, i })).reverse();
+            const q = (this.signQuery || '').trim().toLowerCase();
+            const filtered = q ? list.filter(({ s }) => (s.name || '').toLowerCase().includes(q)) : list;
+            const total = Math.max(1, Math.ceil(filtered.length / signPageSize));
+            const clamped = Math.max(0, Math.min(next, total - 1));
+            this.signPage = clamped;
+            this.renderFlowMgr(container, data);
+        };
+        const gotoSignList = document.getElementById('goto-sign-list');
+        if (gotoSignList) {
+            gotoSignList.addEventListener('click', () => {
+                this.signQuery = '';
+                this.signPage = 0;
+                this.renderDashboard('signList');
+            });
+        }
+        const gotoFooterModals = document.getElementById('goto-footer-modals');
+        if (gotoFooterModals) {
+            gotoFooterModals.addEventListener('click', () => {
+                this.renderDashboard('footerModals');
+            });
+        }
         const reorderEditPanels = () => {
             const panelMap = {
                 hero: 'flow-panel-hero',
@@ -1573,6 +1642,305 @@ th { background: #f3f4f6; text-align: left; }
             this.renderDashboard('budget');
         };
     },
+    renderSignListMgr(container, data) {
+        const signatures = data.signatures || [];
+        const signPageSize = 15;
+        if (this.signPage == null) this.signPage = 0;
+        if (this.signQuery == null) this.signQuery = '';
+        const getSignListMeta = () => {
+            const signQuery = this.signQuery.trim().toLowerCase();
+            const signList = signatures.map((s, i) => ({ s, i })).reverse();
+            const filteredSignList = signQuery
+                ? signList.filter(({ s }) => (s.name || '').toLowerCase().includes(signQuery))
+                : signList;
+            const totalSignPages = Math.max(1, Math.ceil(filteredSignList.length / signPageSize));
+            if (this.signPage > totalSignPages - 1) this.signPage = totalSignPages - 1;
+            const signStart = this.signPage * signPageSize;
+            const signPageItems = filteredSignList.slice(signStart, signStart + signPageSize);
+            return { filteredSignList, totalSignPages, signPageItems };
+        };
+        const renderSignListTable = () => {
+            const { filteredSignList, totalSignPages, signPageItems } = getSignListMeta();
+            return `
+                ${filteredSignList.length === 0 ? `<div class="text-center text-gray-400 py-4 text-sm">검색 결과가 없습니다.</div>` : `
+                <table class="min-w-full text-left text-sm">
+                    <thead class="text-xs text-gray-500 border-b">
+                        <tr>
+                            <th class="py-2 px-2">성명</th>
+                            <th class="py-2 px-2">연락처</th>
+                            <th class="py-2 px-2">주민번호(앞 6)</th>
+                            <th class="py-2 px-2">서명</th>
+                            <th class="py-2 px-2">시간</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${signPageItems.map(({s,i}) => {
+                            const dt = s.timestamp ? new Date(s.timestamp) : null;
+                            const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                            return `<tr>
+                                <td class="py-2 px-2">${sanitize(s.name)}</td>
+                                <td class="py-2 px-2">${sanitize(s.phone)}</td>
+                                <td class="py-2 px-2">${sanitize(s.ssn)}</td>
+                                <td class="py-2 px-2">${s.signData ? `<button class="text-primary text-xs underline" onclick="window.viewSignature(${i})">보기</button>` : '-'}</td>
+                                <td class="py-2 px-2 text-xs text-gray-400">${formatted}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                    <span>페이지 ${this.signPage + 1} / ${totalSignPages} (15개씩)</span>
+                    <div class="flex items-center gap-1">
+                        <button class="border border-gray-300 px-2 py-1 rounded ${this.signPage === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}" onclick="window.setSignPage(${this.signPage - 1})" ${this.signPage === 0 ? 'disabled' : ''}>이전</button>
+                        <button class="border border-gray-300 px-2 py-1 rounded ${this.signPage >= totalSignPages - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}" onclick="window.setSignPage(${this.signPage + 1})" ${this.signPage >= totalSignPages - 1 ? 'disabled' : ''}>다음</button>
+                    </div>
+                </div>`}
+            `;
+        };
+
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="list" class="w-4 h-4 text-primary"></i>
+                        <h4 class="font-bold">서명리스트 관리</h4>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <span>총 서명: <span class="font-bold text-gray-800">${signatures.length}</span></span>
+                        <button id="export-signatures" class="border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-50">리스트 저장</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end">
+                    <input id="sign-search-input" value="${sanitizeAttr(this.signQuery)}" class="border border-gray-300 rounded px-2 py-1 text-xs w-48" placeholder="성명으로 검색">
+                </div>
+                <div class="text-xs text-gray-500">온라인 서명 입력값은 사용자 입력을 그대로 저장합니다.</div>
+                <div class="overflow-x-auto">
+                    <div id="sign-list-table-wrap">
+                        ${renderSignListTable()}
+                    </div>
+                </div>
+            </div>`;
+
+        window.viewSignature = (i) => {
+            const item = data.signatures && data.signatures[i];
+            if(!item || !item.signData) {
+                showAdminToast('서명 데이터가 없습니다.');
+                return;
+            }
+            const win = window.open();
+            if(!win) { showAdminToast('팝업이 차단되었습니다.'); return; }
+            const safeSrc = item.signData.replace(/"/g,'&quot;');
+            win.document.write(`<html><head><title>서명보기</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#f8fafc;"><img src="${safeSrc}" style="max-width:100%;max-height:100vh;"/></body></html>`);
+        };
+        const tableWrap = document.getElementById('sign-list-table-wrap');
+        const refreshSignTable = () => {
+            if (tableWrap) tableWrap.innerHTML = renderSignListTable();
+            else this.renderSignListMgr(container, data);
+        };
+        const scheduleSignTableRefresh = () => {
+            if (this.signSearchTimer) clearTimeout(this.signSearchTimer);
+            this.signSearchTimer = setTimeout(() => {
+                this.signSearchTimer = null;
+                refreshSignTable();
+            }, 200);
+        };
+        window.setSignPage = (next) => {
+            const list = (data.signatures || []).map((s, i) => ({ s, i })).reverse();
+            const q = (this.signQuery || '').trim().toLowerCase();
+            const filtered = q ? list.filter(({ s }) => (s.name || '').toLowerCase().includes(q)) : list;
+            const total = Math.max(1, Math.ceil(filtered.length / signPageSize));
+            const clamped = Math.max(0, Math.min(next, total - 1));
+            this.signPage = clamped;
+            refreshSignTable();
+        };
+        const signSearchInput = document.getElementById('sign-search-input');
+        if (signSearchInput) {
+            signSearchInput.addEventListener('compositionstart', () => {
+                this.signIsComposing = true;
+            });
+            signSearchInput.addEventListener('compositionend', (e) => {
+                this.signIsComposing = false;
+                this.signQuery = e.target.value || '';
+                this.signPage = 0;
+                scheduleSignTableRefresh();
+            });
+            signSearchInput.addEventListener('input', (e) => {
+                if (e.isComposing || this.signIsComposing) return;
+                this.signQuery = e.target.value || '';
+                this.signPage = 0;
+                scheduleSignTableRefresh();
+            });
+        }
+
+        const exportSignatures = () => {
+            if(!data.signatures || data.signatures.length === 0) {
+                showAdminToast('다운로드할 서명이 없습니다.');
+                return;
+            }
+            const headers = ['성명','연락처','주민번호앞6','서명이미지','시간'];
+            const rows = data.signatures.map(s => {
+                const dt = s.timestamp ? new Date(s.timestamp) : null;
+                const formatted = dt && !isNaN(dt) ? dt.toLocaleString('ko-KR') : '';
+                const imgHtml = s.signData ? `<img src="${s.signData}" style="max-height:200px; max-width:200px;"/>` : '-';
+                return [sanitize(s.name), sanitize(s.phone), sanitize(s.ssn), imgHtml, formatted];
+            });
+            const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>서명 리스트</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 16px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+th { background: #f3f4f6; text-align: left; }
+</style>
+</head>
+<body>
+<h2>서명 리스트 (${data.signatures.length}건)</h2>
+<table>
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>
+        ${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+</table>
+</body>
+</html>`;
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `signatures_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAdminToast('서명 리스트를 다운로드했습니다.');
+        };
+
+        const exportBtn = document.getElementById('export-signatures');
+        if(exportBtn) exportBtn.onclick = exportSignatures;
+    },
+    renderFooterModalMgr(container, data) {
+        data.settings = data.settings || {};
+        if (!Array.isArray(data.settings.footerModals)) data.settings.footerModals = [];
+        while (data.settings.footerModals.length < 2) {
+            data.settings.footerModals.push({ title: `푸터 모달 ${data.settings.footerModals.length + 1}`, blocks: [] });
+        }
+        data.settings.footerModals = data.settings.footerModals.slice(0, 2).map((modal, idx) => ({
+            title: modal?.title || `푸터 모달 ${idx + 1}`,
+            blocks: Array.isArray(modal?.blocks) ? modal.blocks : []
+        }));
+
+        const toast = (msg) => {
+            let t = document.getElementById('admin-toast');
+            if(!t) {
+                t = document.createElement('div');
+                t.id = 'admin-toast';
+                Object.assign(t.style, {
+                    position:'fixed', top:'20px', right:'20px', zIndex:'12000',
+                    padding:'12px 16px', background:'#111827', color:'white',
+                    borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.2)',
+                    transition:'opacity 0.3s, transform 0.3s',
+                    opacity:'0', transform:'translateY(-10px)',
+                    pointerEvents:'none'
+                });
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.opacity = '1';
+            t.style.transform = 'translateY(0)';
+            setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(-10px)'; },1500);
+        };
+
+        const renderBlocks = (modal, mi) => modal.blocks.map((block, bi) => {
+            if (block.type === 'image') {
+                const imgId = `footer-modal-${mi}-img-${bi}`;
+                const previewId = `footer-modal-${mi}-img-preview-${bi}`;
+                return `
+                    <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-gray-500">이미지</span>
+                            <button class="text-red-500 text-xs" onclick="window.removeFooterModalBlock(${mi}, ${bi})">삭제</button>
+                        </div>
+                        <input id="${imgId}" value="${sanitizeAttr(block.value || '')}" class="w-full border p-2 rounded text-sm" placeholder="https://...jpg" oninput="window.updateFooterModalImage(${mi}, ${bi})">
+                        <div class="mt-2 w-full aspect-[4/3] bg-white border rounded overflow-hidden">
+                            <img id="${previewId}" src="${sanitize(block.value || '')}" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                `;
+            }
+            const htmlId = `footer-modal-${mi}-html-${bi}`;
+            return `
+                <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-gray-500">HTML</span>
+                        <button class="text-red-500 text-xs" onclick="window.removeFooterModalBlock(${mi}, ${bi})">삭제</button>
+                    </div>
+                    <textarea id="${htmlId}" class="w-full border p-2 rounded text-sm font-mono h-32 focus:h-56 transition-all">${block.value || ''}</textarea>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="space-y-6">
+                ${data.settings.footerModals.map((modal, mi) => `
+                    <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-lg">푸터 모달 ${mi + 1}</h3>
+                            <button class="border border-gray-300 px-2 py-1 rounded text-xs text-gray-700 hover:bg-gray-50" onclick="window.saveFooterModal(${mi})">저장</button>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">모달 제목 / 버튼 이름</label>
+                            <input id="footer-modal-title-input-${mi}" value="${sanitizeAttr(modal.title || '')}" class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div class="space-y-3">
+                            ${modal.blocks.length === 0 ? `<div class="text-xs text-gray-400">등록된 콘텐츠가 없습니다.</div>` : renderBlocks(modal, mi)}
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="border border-gray-300 px-3 py-1.5 rounded text-xs text-gray-700 hover:bg-gray-50" onclick="window.addFooterModalBlock(${mi}, 'html')">HTML 추가</button>
+                            <button class="border border-gray-300 px-3 py-1.5 rounded text-xs text-gray-700 hover:bg-gray-50" onclick="window.addFooterModalBlock(${mi}, 'image')">이미지 추가</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        window.updateFooterModalImage = (mi, bi) => {
+            const input = document.getElementById(`footer-modal-${mi}-img-${bi}`);
+            const img = document.getElementById(`footer-modal-${mi}-img-preview-${bi}`);
+            if (img && input) img.src = input.value || '';
+        };
+        window.addFooterModalBlock = (mi, type) => {
+            const modal = data.settings.footerModals[mi];
+            if (!modal) return;
+            modal.blocks.push({ type, value: '' });
+            DataStore.save(data);
+            this.renderFooterModalMgr(container, data);
+        };
+        window.removeFooterModalBlock = (mi, bi) => {
+            const modal = data.settings.footerModals[mi];
+            if (!modal) return;
+            modal.blocks.splice(bi, 1);
+            DataStore.save(data);
+            this.renderFooterModalMgr(container, data);
+        };
+        window.saveFooterModal = (mi) => {
+            const modal = data.settings.footerModals[mi];
+            if (!modal) return;
+            modal.title = document.getElementById(`footer-modal-title-input-${mi}`)?.value || '';
+            modal.blocks = modal.blocks.map((block, bi) => {
+                if (block.type === 'image') {
+                    const val = document.getElementById(`footer-modal-${mi}-img-${bi}`)?.value || '';
+                    return { ...block, value: val };
+                }
+                const val = document.getElementById(`footer-modal-${mi}-html-${bi}`)?.value || '';
+                return { ...block, value: val };
+            });
+            DataStore.save(data);
+            toast('푸터 모달이 저장되었습니다.');
+        };
+    },
     renderPosterMgr(container, data) {
         const posters = data.posters || [];
         container.innerHTML = `
@@ -1674,9 +2042,38 @@ th { background: #f3f4f6; text-align: left; }
         };
     },
     renderCommunityMgr(container, data) {
+        data.settings = data.settings || {};
+        const commentLimit = Number(data.settings.commentsDisplayLimit || 0);
+        const adminToast = (msg) => {
+            let t = document.getElementById('admin-panel-toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'admin-panel-toast';
+                t.className = 'fixed top-6 right-6 z-[12000] bg-gray-900 text-white px-4 py-2 rounded shadow-lg transition-all';
+                t.style.opacity = '0';
+                t.style.transform = 'translateY(-8px)';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            requestAnimationFrame(() => {
+                t.style.opacity = '1';
+                t.style.transform = 'translateY(0)';
+            });
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translateY(-8px)';
+            }, 1600);
+        };
         container.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
-            <h3 class="font-bold">댓글 관리</h3>
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold">댓글 관리</h3>
+                <div class="flex items-center gap-2 text-xs text-gray-600">
+                    <label for="comments-display-limit" class="text-gray-500">메인 노출 개수</label>
+                    <input id="comments-display-limit" type="number" min="1" value="${commentLimit || 4}" class="w-20 border border-gray-300 rounded px-2 py-1 text-right">
+                    <button id="save-comments-limit" class="border border-gray-300 px-2 py-1 rounded hover:bg-gray-50">저장</button>
+                </div>
+            </div>
             <div class="space-y-3">
                 ${data.comments.map((c,i) => `
                     <div class="border p-4 rounded flex justify-between items-start ${c.approved?'bg-gray-50':'bg-yellow-50 border-yellow-200'}">
@@ -1693,6 +2090,27 @@ th { background: #f3f4f6; text-align: left; }
                                 </div>
                             </div>
                             <p class="text-gray-800 text-sm">${sanitize(c.text)}</p>
+                            <div class="mt-2 bg-white border border-gray-200 rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-gray-600">관리자 대댓글</span>
+                                    <div class="flex gap-2">
+                                        ${c.reply && c.reply.text ? `<button onclick="window.editReply(${i})" class="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-50">수정</button>` : ''}
+                                        ${c.reply && c.reply.text ? `<button onclick="window.delReply(${i})" class="text-xs border border-red-200 text-red-500 px-2 py-1 rounded">삭제</button>` : ''}
+                                    </div>
+                                </div>
+                                ${c.reply && c.reply.text
+                                    ? `<div class="text-sm text-gray-700 whitespace-pre-line">${sanitize(c.reply.text)}</div>
+                                       <div class="text-[10px] text-gray-400 mt-1">${(() => {
+                                            const ts = c.reply.updatedAt || c.reply.timestamp;
+                                            const dt = ts ? new Date(ts) : null;
+                                            return (dt && !isNaN(dt)) ? dt.toLocaleString('ko-KR') : '';
+                                        })()}</div>`
+                                    : `<textarea id="reply-input-${i}" class="w-full border p-2 rounded text-sm h-20" placeholder="관리자 대댓글을 입력하세요."></textarea>
+                                       <div class="flex justify-end mt-2">
+                                           <button onclick="window.saveReply(${i})" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-black">등록</button>
+                                       </div>`
+                                }
+                            </div>
                             <div class="text-[10px] text-gray-400 flex gap-2 items-center mt-1 border-t pt-2 border-gray-200/50">
                                 <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${(() => {
                                     const src = c.timestamp || c.date || c.time;
@@ -1707,14 +2125,53 @@ th { background: #f3f4f6; text-align: left; }
                         </div>
                     </div>`).join('')}
             </div>
-            <h3 class="font-bold mt-8 border-t pt-6">탄원서 목록 (${data.petitions.length})</h3>
-            <div class="max-h-40 overflow-y-auto text-sm space-y-2">
-                ${data.petitions.map(p=>`<div class="flex justify-between border-b pb-2"><span>${p.date.split('T')[0]} - ${sanitize(p.name)}</span><span class="text-gray-400 text-xs">${this.maskIP(p.ip)}</span></div>`).join('')}
-            </div>
         </div>`;
         
         window.approveMsg = (i) => { data.comments[i].approved = true; DataStore.save(data); this.renderDashboard('community'); };
         window.delMsg = (i) => { data.comments.splice(i,1); DataStore.save(data); this.renderDashboard('community'); };
+        window.saveReply = (i) => {
+            const input = document.getElementById(`reply-input-${i}`);
+            const text = (input?.value || '').trim();
+            if (!text) return;
+            data.comments[i].reply = {
+                text,
+                timestamp: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            DataStore.save(data);
+            this.renderDashboard('community');
+        };
+        window.editReply = (i) => {
+            const current = data.comments[i].reply?.text || '';
+            const text = prompt('대댓글 수정', current);
+            if (text == null) return;
+            const trimmed = text.trim();
+            if (!trimmed) return;
+            data.comments[i].reply = {
+                text: trimmed,
+                timestamp: data.comments[i].reply?.timestamp || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            DataStore.save(data);
+            this.renderDashboard('community');
+        };
+        window.delReply = (i) => {
+            if (!data.comments[i].reply) return;
+            if (confirm('대댓글을 삭제하시겠습니까?')) {
+                delete data.comments[i].reply;
+                DataStore.save(data);
+                this.renderDashboard('community');
+            }
+        };
+        const saveLimitBtn = document.getElementById('save-comments-limit');
+        if (saveLimitBtn) {
+            saveLimitBtn.onclick = () => {
+                const val = Number(document.getElementById('comments-display-limit')?.value || 0);
+                data.settings.commentsDisplayLimit = Math.max(1, val || 4);
+                DataStore.save(data);
+                adminToast('메인 노출 개수가 저장되었습니다.');
+            };
+        }
         if(window.lucide) lucide.createIcons();
     },
     renderDonateJoinMgr(container, data) {
@@ -1838,11 +2295,401 @@ th { background: #f3f4f6; text-align: left; }
         };
         subWrap.innerHTML = `
             <div class="bg-white p-6 rounded-xl shadow-sm space-y-3 mt-4">
-                <div class="flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">신청 내역</h4></div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-primary"></i><h4 class="font-bold">신청 내역</h4></div>
+                    <button type="button" id="export-donate-joins" class="border border-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-50">엑셀 다운로드</button>
+                </div>
                 ${renderSubs()}
             </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm space-y-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-4 h-4 text-primary"></i><h4 class="font-bold">신청 통계</h4></div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <button type="button" id="export-donate-stats" class="border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50">통계 엑셀</button>
+                        <select id="donate-stats-label" class="border border-gray-300 rounded px-2 py-1">
+                            <option value="__all__">전체 레이블</option>
+                        </select>
+                        <select id="donate-stats-range" class="border border-gray-300 rounded px-2 py-1">
+                            <option value="all">전체</option>
+                            <option value="7">최근 7일</option>
+                            <option value="30">최근 30일</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="donate-stats-value-toggle" class="rounded border-gray-300">
+                        레이블 값 기준 통계 보기
+                    </label>
+                    <select id="donate-stats-value-label" class="border border-gray-300 rounded px-2 py-1 hidden">
+                        <option value="">레이블 선택</option>
+                    </select>
+                </div>
+                <div id="donate-stats-empty" class="text-sm text-gray-400 hidden">통계를 표시할 데이터가 없습니다.</div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="border rounded-lg p-3">
+                        <div class="text-xs text-gray-500 mb-2">일자별 건수 (막대)</div>
+                        <canvas id="donate-stats-bar"></canvas>
+                    </div>
+                    <div class="border rounded-lg p-3">
+                        <div class="text-xs text-gray-500 mb-2">일자별 누적 (꺾은선)</div>
+                        <canvas id="donate-stats-line"></canvas>
+                    </div>
+                </div>
+                <div class="border rounded-lg p-3">
+                    <div class="text-xs text-gray-500 mb-2">레이블 분포 (파이)</div>
+                    <canvas id="donate-stats-pie"></canvas>
+                </div>
+            </div>
         `;
-        container.appendChild(subWrap.firstElementChild);
+        while (subWrap.firstElementChild) {
+            container.appendChild(subWrap.firstElementChild);
+        }
+        const exportBtn = document.getElementById('export-donate-joins');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                if (!subs || subs.length === 0) {
+                    adminToast('다운로드할 신청 내역이 없습니다.');
+                    return;
+                }
+                const labelCounts = new Map();
+                const labelOrder = [];
+                const rows = subs.map((s) => {
+                    const row = {};
+                    const snapshot = Array.isArray(s.fieldsSnapshot) ? s.fieldsSnapshot : [];
+                    const entries = snapshot.length
+                        ? snapshot
+                        : Object.keys(s.form || {}).map((k) => ({ name: k, label: k }));
+                    entries.forEach((field) => {
+                        const label = field.label || field.name || '';
+                        if (!label) return;
+                        row[label] = s.form ? (s.form[field.name] || '') : (s[field.name] || '');
+                    });
+                    Object.keys(row).forEach((label) => {
+                        labelCounts.set(label, (labelCounts.get(label) || 0) + 1);
+                        if (!labelOrder.includes(label)) labelOrder.push(label);
+                    });
+                    return row;
+                });
+                const headers = Array.from(labelCounts.keys()).sort((a, b) => {
+                    const diff = (labelCounts.get(b) || 0) - (labelCounts.get(a) || 0);
+                    if (diff !== 0) return diff;
+                    return labelOrder.indexOf(a) - labelOrder.indexOf(b);
+                });
+                const escapeHtml = (value) => {
+                    const text = String(value ?? '');
+                    return text.replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                };
+                const table = `
+<table>
+    <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+    <tbody>
+        ${rows.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+</table>`;
+                const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>후원 가입 신청 내역</title>
+<style>
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 6px; font-size: 12px; text-align: left; }
+th { background: #f3f4f6; }
+</style>
+</head>
+<body>
+${table}
+</body>
+</html>`;
+                const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `donate_joins_${new Date().toISOString().slice(0,10)}.xls`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                adminToast('엑셀 파일을 다운로드했습니다.');
+            });
+        }
+        const labelSelect = document.getElementById('donate-stats-label');
+        const rangeSelect = document.getElementById('donate-stats-range');
+        const valueToggle = document.getElementById('donate-stats-value-toggle');
+        const valueLabelSelect = document.getElementById('donate-stats-value-label');
+        const statsExportBtn = document.getElementById('export-donate-stats');
+        const emptyEl = document.getElementById('donate-stats-empty');
+        const barCanvas = document.getElementById('donate-stats-bar');
+        const lineCanvas = document.getElementById('donate-stats-line');
+        const pieCanvas = document.getElementById('donate-stats-pie');
+        if (labelSelect && rangeSelect && valueToggle && valueLabelSelect && statsExportBtn && barCanvas && lineCanvas && pieCanvas) {
+            const getLabelEntries = (s) => {
+                const snapshot = Array.isArray(s.fieldsSnapshot) ? s.fieldsSnapshot : [];
+                const entries = snapshot.length
+                    ? snapshot
+                    : Object.keys(s.form || {}).map((k)=>({ name:k, label:k }));
+                return entries.map((field) => ({
+                    name: field.name,
+                    label: field.label || field.name || ''
+                })).filter(f => f.label);
+            };
+            const getDateKey = (s) => {
+                const ts = s.timestamp ? new Date(s.timestamp) : null;
+                if (!ts || isNaN(ts)) return null;
+                return ts.toLocaleDateString('ko-KR');
+            };
+            const allLabels = new Set();
+            subs.forEach((s) => {
+                getLabelEntries(s).forEach((f) => allLabels.add(f.label));
+            });
+            Array.from(allLabels).forEach((label) => {
+                const opt = document.createElement('option');
+                opt.value = label;
+                opt.textContent = label;
+                labelSelect.appendChild(opt);
+                const opt2 = document.createElement('option');
+                opt2.value = label;
+                opt2.textContent = label;
+                valueLabelSelect.appendChild(opt2);
+            });
+
+            const destroyChart = (chart) => {
+                if (chart) chart.destroy();
+            };
+            if (!this._donateJoinCharts) this._donateJoinCharts = {};
+
+            const buildSeries = (label, range) => {
+                const counts = new Map();
+                const labelCounts = new Map();
+                subs.forEach((s) => {
+                    const dateKey = getDateKey(s);
+                    if (!dateKey) return;
+                    const entries = getLabelEntries(s);
+                    const values = s.form || {};
+                    entries.forEach((f) => {
+                        const val = (values[f.name] || '').toString().trim();
+                        if (!val) return;
+                        labelCounts.set(f.label, (labelCounts.get(f.label) || 0) + 1);
+                        if (label !== '__all__' && f.label !== label) return;
+                        counts.set(dateKey, (counts.get(dateKey) || 0) + 1);
+                    });
+                });
+                const dates = Array.from(counts.keys()).map((d) => {
+                    const parts = d.split('.').map(p => p.trim());
+                    const safe = parts.length >= 3 ? `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}` : d;
+                    return { key: d, sortKey: new Date(safe) };
+                }).sort((a,b) => a.sortKey - b.sortKey);
+                let filteredDates = dates;
+                if (range !== 'all') {
+                    const days = Number(range);
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - (days - 1));
+                    filteredDates = dates.filter(d => d.sortKey >= cutoff);
+                }
+                const labels = filteredDates.map(d => d.key);
+                const values = filteredDates.map(d => counts.get(d.key) || 0);
+                const cumulative = [];
+                values.reduce((sum, v, i) => {
+                    const next = sum + v;
+                    cumulative[i] = next;
+                    return next;
+                }, 0);
+                return { labels, values, cumulative, labelCounts };
+            };
+            const buildValueSeries = (valueLabel, range) => {
+                const dailyCounts = new Map();
+                const valueCounts = new Map();
+                subs.forEach((s) => {
+                    const dateKey = getDateKey(s);
+                    if (!dateKey) return;
+                    const entries = getLabelEntries(s);
+                    const values = s.form || {};
+                    entries.forEach((f) => {
+                        if (f.label !== valueLabel) return;
+                        const val = (values[f.name] || '').toString().trim();
+                        if (!val) return;
+                        dailyCounts.set(dateKey, (dailyCounts.get(dateKey) || 0) + 1);
+                        valueCounts.set(val, (valueCounts.get(val) || 0) + 1);
+                    });
+                });
+                const dates = Array.from(dailyCounts.keys()).map((d) => {
+                    const parts = d.split('.').map(p => p.trim());
+                    const safe = parts.length >= 3 ? `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}` : d;
+                    return { key: d, sortKey: new Date(safe) };
+                }).sort((a,b) => a.sortKey - b.sortKey);
+                let filteredDates = dates;
+                if (range !== 'all') {
+                    const days = Number(range);
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - (days - 1));
+                    filteredDates = dates.filter(d => d.sortKey >= cutoff);
+                }
+                const labels = filteredDates.map(d => d.key);
+                const values = filteredDates.map(d => dailyCounts.get(d.key) || 0);
+                return { labels, values, valueCounts };
+            };
+
+            const renderCharts = () => {
+                const useValueMode = valueToggle.checked;
+                const range = rangeSelect.value;
+                const label = labelSelect.value;
+                const valueLabel = valueLabelSelect.value;
+                const { labels, values, cumulative, labelCounts } = buildSeries(label, range);
+                const hasData = labels.length > 0;
+                if (emptyEl) emptyEl.classList.toggle('hidden', hasData);
+                destroyChart(this._donateJoinCharts.bar);
+                destroyChart(this._donateJoinCharts.line);
+                destroyChart(this._donateJoinCharts.pie);
+                if (hasData) {
+                    if (!useValueMode) {
+                        this._donateJoinCharts.bar = new Chart(barCanvas, {
+                            type: 'bar',
+                            data: { labels, datasets: [{ label: '건수', data: values, backgroundColor: '#60A5FA' }] },
+                            options: { responsive: true, plugins: { legend: { display: false } } }
+                        });
+                        this._donateJoinCharts.line = new Chart(lineCanvas, {
+                            type: 'line',
+                            data: { labels, datasets: [{ label: '누적', data: cumulative, borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.2)', fill: true, tension: 0.3 }] },
+                            options: { responsive: true, plugins: { legend: { display: false } } }
+                        });
+                    } else if (valueLabel) {
+                        const valueSeries = buildValueSeries(valueLabel, range);
+                        const dateLabels = valueSeries.labels;
+                        const dateValues = valueSeries.values;
+                        this._donateJoinCharts.bar = new Chart(barCanvas, {
+                            type: 'bar',
+                            data: { labels: dateLabels, datasets: [{ label: `${valueLabel} 일자별 건수`, data: dateValues, backgroundColor: '#60A5FA' }] },
+                            options: { responsive: true, plugins: { legend: { display: false } } }
+                        });
+                        const valueLabels = Array.from(valueSeries.valueCounts.keys());
+                        if (valueLabels.length > 0) {
+                            const pieData = valueLabels.map(l => valueSeries.valueCounts.get(l) || 0);
+                            const colors = valueLabels.map((_, i) => `hsl(${(i * 47) % 360} 70% 60%)`);
+                            this._donateJoinCharts.pie = new Chart(pieCanvas, {
+                                type: 'pie',
+                                data: { labels: valueLabels, datasets: [{ data: pieData, backgroundColor: colors }] },
+                                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                            });
+                        }
+                    }
+                }
+                if (!useValueMode) {
+                    const pieLabels = Array.from(labelCounts.keys());
+                    if (pieLabels.length > 0) {
+                        const pieData = pieLabels.map(l => labelCounts.get(l) || 0);
+                        const colors = pieLabels.map((_, i) => `hsl(${(i * 47) % 360} 70% 60%)`);
+                        this._donateJoinCharts.pie = new Chart(pieCanvas, {
+                            type: 'pie',
+                            data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: colors }] },
+                            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                        });
+                    }
+                }
+            };
+            renderCharts();
+            labelSelect.addEventListener('change', renderCharts);
+            rangeSelect.addEventListener('change', renderCharts);
+            valueToggle.addEventListener('change', () => {
+                const enabled = valueToggle.checked;
+                valueLabelSelect.classList.toggle('hidden', !enabled);
+                renderCharts();
+            });
+            valueLabelSelect.addEventListener('change', renderCharts);
+            const escapeHtml = (value) => {
+                const text = String(value ?? '');
+                return text.replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            };
+            statsExportBtn.addEventListener('click', () => {
+                const useValueMode = valueToggle.checked;
+                const range = rangeSelect.value;
+                const label = labelSelect.value;
+                const valueLabel = valueLabelSelect.value;
+                let htmlTables = '';
+                if (!useValueMode) {
+                    const series = buildSeries(label, range);
+                    const rows = series.labels.map((d, i) => ({
+                        date: d,
+                        count: series.values[i] || 0,
+                        cumulative: series.cumulative[i] || 0
+                    }));
+                    const labelRows = Array.from(series.labelCounts.keys()).map((k) => ({
+                        label: k,
+                        count: series.labelCounts.get(k) || 0
+                    }));
+                    htmlTables += `
+<h3>일자별 건수/누적</h3>
+<table>
+    <thead><tr><th>날짜</th><th>건수</th><th>누적</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.count)}</td><td>${escapeHtml(r.cumulative)}</td></tr>`).join('')}</tbody>
+</table>
+<h3>레이블 분포</h3>
+<table>
+    <thead><tr><th>레이블</th><th>건수</th></tr></thead>
+    <tbody>${labelRows.map(r => `<tr><td>${escapeHtml(r.label)}</td><td>${escapeHtml(r.count)}</td></tr>`).join('')}</tbody>
+</table>`;
+                } else if (valueLabel) {
+                    const valueSeries = buildValueSeries(valueLabel, range);
+                    const rows = valueSeries.labels.map((d, i) => ({
+                        date: d,
+                        count: valueSeries.values[i] || 0
+                    }));
+                    const valueRows = Array.from(valueSeries.valueCounts.keys()).map((k) => ({
+                        value: k,
+                        count: valueSeries.valueCounts.get(k) || 0
+                    }));
+                    htmlTables += `
+<h3>${escapeHtml(valueLabel)} 일자별 건수</h3>
+<table>
+    <thead><tr><th>날짜</th><th>건수</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.count)}</td></tr>`).join('')}</tbody>
+</table>
+<h3>${escapeHtml(valueLabel)} 값 분포</h3>
+<table>
+    <thead><tr><th>값</th><th>건수</th></tr></thead>
+    <tbody>${valueRows.map(r => `<tr><td>${escapeHtml(r.value)}</td><td>${escapeHtml(r.count)}</td></tr>`).join('')}</tbody>
+</table>`;
+                } else {
+                    adminToast('레이블을 선택해주세요.');
+                    return;
+                }
+                const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>후원 가입 통계</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 16px; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+th, td { border: 1px solid #ddd; padding: 6px; font-size: 12px; text-align: left; }
+th { background: #f3f4f6; }
+h3 { margin: 16px 0 8px; }
+</style>
+</head>
+<body>
+${htmlTables}
+</body>
+</html>`;
+                const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `donate_stats_${new Date().toISOString().slice(0,10)}.xls`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                adminToast('통계 엑셀을 다운로드했습니다.');
+            });
+        }
         if(window.lucide) lucide.createIcons();
     },
     renderStats(container) {

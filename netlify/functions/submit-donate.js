@@ -14,7 +14,9 @@ const pool = DB_URL
     })
     : null;
 
+let settingsTableReady = false;
 const ensureTable = async () => {
+    if (settingsTableReady) return;
     if (!pool) throw new Error('Database not configured');
     await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (
@@ -23,6 +25,7 @@ const ensureTable = async () => {
             updated_at TIMESTAMPTZ DEFAULT now()
         )
     `);
+    settingsTableReady = true;
 };
 
 exports.handler = async (event) => {
