@@ -337,6 +337,16 @@ export const DataStore = {
 </div>`
                 }
             ],
+            settlement: {
+                data: [],
+                settings: { totalFund: 0, manualSpent: null, manualRemain: null },
+                categories: [
+                    "1. 법률 및 소송 지원",
+                    "2. 유가족 긴급 지원",
+                    "3. 진상 규명 활동",
+                    "4. 캠페인 운영 및 홍보"
+                ]
+            },
             signResources: [],
             posters: [
                 { title: "거리 캠페인용", url: "", link: "https://example.com/support", qr: "" },

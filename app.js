@@ -876,19 +876,212 @@ function setupEventListeners(data) {
         const data = CURRENT_DATA || DataStore.get();
         const item = data.resources[idx];
         if(!item) return;
-        
+
         const modal = document.getElementById('resource-modal');
+        const container = document.getElementById('res-modal-container');
         document.getElementById('res-modal-title').textContent = item.title;
-        
 
         const contentContainer = document.getElementById('res-modal-desc');
 
+        // SETTLEMENT 타입: 정산 보고 전체 UI 렌더링
+        if(item.type === 'SETTLEMENT') {
+            container.classList.remove('max-w-2xl');
+            container.classList.add('max-w-7xl');
+            contentContainer.classList.remove('prose', 'prose-sm');
+            renderSettlementUI(contentContainer, data);
+        } else {
+            container.classList.remove('max-w-7xl');
+            container.classList.add('max-w-2xl');
+            contentContainer.classList.add('prose', 'prose-sm');
+            contentContainer.innerHTML = item.content;
+        }
 
-        contentContainer.innerHTML = item.content; 
-        
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.add('opacity-100'), 10);
     };
+
+    // 정산 보고 UI 렌더링 함수
+    function renderSettlementUI(container, data) {
+        const s = data.settlement || { data: [], settings: { totalFund: 0, manualSpent: null, manualRemain: null }, categories: [] };
+        const entries = s.data || [];
+        const settings = s.settings || { totalFund: 0, manualSpent: null, manualRemain: null };
+        const categories = s.categories || [];
+
+        const calculatedExpenses = entries.reduce((sum, item) => sum + (parseInt(item.amount) || 0), 0);
+        const totalFund = settings.totalFund || 0;
+        const totalExpenses = settings.manualSpent !== null && settings.manualSpent !== undefined ? settings.manualSpent : calculatedExpenses;
+        const remainingBalance = settings.manualRemain !== null && settings.manualRemain !== undefined ? settings.manualRemain : (totalFund - totalExpenses);
+
+        const fmt = (v) => new Intl.NumberFormat('ko-KR').format(v);
+
+        // 카테고리별 합산
+        const catSummary = {};
+        categories.forEach(c => catSummary[c] = 0);
+        entries.forEach(item => {
+            if(catSummary.hasOwnProperty(item.category)) {
+                catSummary[item.category] += (parseInt(item.amount) || 0);
+            }
+        });
+
+        const sorted = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        container.innerHTML = `
+            <div class="space-y-6">
+                <!-- Dashboard -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="lg:col-span-1 grid grid-cols-1 gap-3">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">총 후원 모금액</p>
+                            <h3 class="text-xl font-black text-[#0f172a]">${fmt(totalFund)} <span class="text-xs font-normal text-slate-400 ml-1">KRW</span></h3>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <p class="text-[10px] font-bold text-red-500 uppercase mb-1">누적 집행액</p>
+                            <h3 class="text-xl font-black text-red-600">${fmt(totalExpenses)} <span class="text-xs font-normal text-slate-400 ml-1">KRW</span></h3>
+                        </div>
+                        <div class="bg-[#0f172a] p-5 rounded-2xl shadow-xl">
+                            <p class="text-[10px] font-bold text-blue-400 uppercase mb-1">잔여 기금 총액</p>
+                            <h3 class="text-xl font-black text-white">${fmt(remainingBalance)} <span class="text-xs font-normal text-slate-500/50 ml-1">KRW</span></h3>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm min-h-[250px]">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-500"></i> 목적별 집행 현황</h4>
+                            <span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold">REAL-TIME DATA</span>
+                        </div>
+                        <div style="height:200px"><canvas id="settlement-chart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Filter -->
+                <div class="flex justify-end">
+                    <select id="settlement-filter" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 outline-none font-bold">
+                        <option value="all">전체 항목 보기</option>
+                        ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase border-b">
+                                <tr>
+                                    <th class="px-4 py-3">일자</th>
+                                    <th class="px-3 py-3">분류</th>
+                                    <th class="px-3 py-3">항목명</th>
+                                    <th class="px-3 py-3 text-right">금액</th>
+                                    <th class="px-3 py-3 hidden sm:table-cell">수취인</th>
+                                    <th class="px-4 py-3 text-center">증빙</th>
+                                </tr>
+                            </thead>
+                            <tbody id="settlement-table-body" class="divide-y text-sm">
+                                ${sorted.length === 0 ? '' : sorted.map(item => `
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-4 py-4 whitespace-nowrap text-slate-400 font-medium tabular-nums text-xs">${item.date}</td>
+                                        <td class="px-3 py-4"><span class="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-500 truncate max-w-[100px]">${item.category}</span></td>
+                                        <td class="px-3 py-4 font-bold text-slate-800 text-xs">${item.item}</td>
+                                        <td class="px-3 py-4 text-right font-black text-slate-900 tabular-nums text-xs">${fmt(item.amount)} 원</td>
+                                        <td class="px-3 py-4 text-slate-600 font-medium text-xs hidden sm:table-cell">${item.recipient}</td>
+                                        <td class="px-4 py-4 text-center">
+                                            <button onclick="window._viewSettlementProof('${item.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${sorted.length === 0 ? '<div class="py-16 text-center text-slate-300">내역이 없습니다.</div>' : ''}
+                </div>
+            </div>
+        `;
+
+        // 증빙 보기
+        window._viewSettlementProof = (id) => {
+            const item = entries.find(i => i.id === id);
+            if(!item) return;
+            const proofModal = document.getElementById('settlement-proof-modal');
+            if(!proofModal) {
+                // 동적 증빙 모달 생성
+                const m = document.createElement('div');
+                m.id = 'settlement-proof-modal';
+                m.className = 'fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[6000] hidden flex items-center justify-center p-4';
+                m.innerHTML = `
+                    <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
+                        <div class="p-6 border-b flex justify-between items-center">
+                            <h5 id="stl-proof-title" class="font-bold">증빙 자료</h5>
+                            <button onclick="document.getElementById('settlement-proof-modal').classList.add('hidden')" class="p-2 bg-slate-100 rounded-lg"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        <div id="stl-proof-content" class="p-6 overflow-y-auto"></div>
+                    </div>
+                `;
+                document.body.appendChild(m);
+            }
+            document.getElementById('stl-proof-title').innerText = `${item.date} | ${item.item}`;
+            const content = document.getElementById('stl-proof-content');
+            if(item.proofs && item.proofs.length > 0) {
+                content.innerHTML = item.proofs.map(p => `<div class="space-y-2 border-b pb-6 last:border-0"><img src="${p}" alt="증빙" class="w-full rounded-lg shadow-sm"></div>`).join('');
+            } else {
+                content.innerHTML = '<p class="py-16 text-center text-slate-300">증빙 자료가 없습니다.</p>';
+            }
+            document.getElementById('settlement-proof-modal').classList.remove('hidden');
+            if(window.lucide) lucide.createIcons();
+        };
+
+        // 필터 이벤트
+        const filterEl = document.getElementById('settlement-filter');
+        if(filterEl) {
+            filterEl.addEventListener('change', () => {
+                const val = filterEl.value;
+                const filtered = val === 'all' ? sorted : sorted.filter(i => i.category === val);
+                const tbody = document.getElementById('settlement-table-body');
+                if(!tbody) return;
+                tbody.innerHTML = filtered.length === 0 ? '' : filtered.map(item => `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-4 whitespace-nowrap text-slate-400 font-medium tabular-nums text-xs">${item.date}</td>
+                        <td class="px-3 py-4"><span class="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-500 truncate max-w-[100px]">${item.category}</span></td>
+                        <td class="px-3 py-4 font-bold text-slate-800 text-xs">${item.item}</td>
+                        <td class="px-3 py-4 text-right font-black text-slate-900 tabular-nums text-xs">${fmt(item.amount)} 원</td>
+                        <td class="px-3 py-4 text-slate-600 font-medium text-xs hidden sm:table-cell">${item.recipient}</td>
+                        <td class="px-4 py-4 text-center">
+                            <button onclick="window._viewSettlementProof('${item.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+        }
+
+        // Chart.js 렌더링
+        setTimeout(() => {
+            const ctx = document.getElementById('settlement-chart');
+            if(!ctx || !window.Chart) return;
+            const labels = Object.keys(catSummary).map(l => l.includes('.') ? l.split('. ')[1] : l);
+            const values = Object.values(catSummary);
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: '누적 집행액',
+                        data: values,
+                        backgroundColor: ['#0f172a', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'],
+                        borderRadius: 6,
+                        barThickness: 24
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `합계: ${fmt(c.raw)} 원` } } },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { callback: (v) => v >= 10000 ? (v/10000)+'만' : v } },
+                        y: { ticks: { font: { weight: 'bold' } } }
+                    }
+                }
+            });
+            if(window.lucide) lucide.createIcons();
+        }, 100);
+    }
 
     const generateQRDataUrl = (text) => new Promise((resolve, reject) => {
         try {

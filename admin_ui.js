@@ -170,6 +170,7 @@ export const AdminUI = {
             else if(tab === 'signList') this.renderSignListMgr(container, data);
             else if(tab === 'footerModals') this.renderFooterModalMgr(container, data);
             else if(tab === 'donateJoin') this.renderDonateJoinMgr(container, data);
+            else if(tab === 'settlement') this.renderSettlementMgr(container, data);
             else container.innerHTML = '<p class="text-center text-gray-400 mt-10">기능 준비중</p>';
             if(window.lucide) lucide.createIcons();
         };
@@ -2892,8 +2893,276 @@ ${htmlTables}
             reader.readAsText(file);
         };
         
-        document.getElementById('reset-all').onclick = () => { 
-            if(confirm('정말로 모든 데이터를 초기화하시겠습니까?\\n이 작업은 되돌릴 수 없습니다.')) DataStore.reset(); 
+        document.getElementById('reset-all').onclick = () => {
+            if(confirm('정말로 모든 데이터를 초기화하시겠습니까?\\n이 작업은 되돌릴 수 없습니다.')) DataStore.reset();
         };
+    },
+
+    // ===== 정산 관리 탭 =====
+    renderSettlementMgr(container, data) {
+        if(!data.settlement) {
+            data.settlement = {
+                data: [],
+                settings: { totalFund: 0, manualSpent: null, manualRemain: null },
+                categories: ["1. 법률 및 소송 지원","2. 유가족 긴급 지원","3. 진상 규명 활동","4. 캠페인 운영 및 홍보"]
+            };
+        }
+        const s = data.settlement;
+
+        const fmtInput = (v) => {
+            const num = v.toString().replace(/[^0-9]/g, '');
+            if(!num) return '';
+            return new Intl.NumberFormat('ko-KR').format(num);
+        };
+        const parseNum = (v) => parseInt(v.toString().replace(/[^0-9]/g, '')) || 0;
+
+        const toast = (msg) => {
+            showToast(msg);
+        };
+
+        const catOptions = () => (s.categories || []).map(c => `<option value="${sanitize(c)}">${sanitize(c)}</option>`).join('');
+
+        const renderList = () => {
+            const listEl = document.getElementById('stl-admin-list');
+            if(!listEl) return;
+            const entries = (s.data || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+            if(entries.length === 0) {
+                listEl.innerHTML = '<div class="py-10 text-center text-gray-400">등록된 내역이 없습니다.</div>';
+                return;
+            }
+            listEl.innerHTML = entries.map(item => `
+                <div class="p-3 bg-white border border-gray-200 rounded-xl flex justify-between items-center">
+                    <div class="truncate mr-3">
+                        <div class="text-[10px] text-gray-400 font-bold">${sanitize(item.date)} | ${sanitize(item.category)}</div>
+                        <div class="font-bold text-gray-800 text-sm truncate">${sanitize(item.item)}</div>
+                        <div class="text-blue-600 font-black text-xs">${fmtInput(item.amount)}원</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        <button onclick="window._stlEdit('${item.id}')" class="p-2 bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                        <button onclick="window._stlDel('${item.id}')" class="p-2 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            if(window.lucide) lucide.createIcons();
+        };
+
+        const renderCats = () => {
+            const catList = document.getElementById('stl-cat-list');
+            if(!catList) return;
+            catList.innerHTML = (s.categories || []).map((cat, i) => `
+                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border">
+                    <input type="text" value="${sanitize(cat)}" onchange="window._stlUpdateCat(${i}, this.value)" class="flex-1 bg-transparent border-none text-sm font-bold focus:ring-0 outline-none">
+                    <button onclick="window._stlDelCat(${i})" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                </div>
+            `).join('');
+            // update category select in form
+            const sel = document.getElementById('stl-form-category');
+            if(sel) sel.innerHTML = catOptions();
+            if(window.lucide) lucide.createIcons();
+        };
+
+        container.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="font-bold text-lg mb-2">후원 정산 관리</h3>
+                <p class="text-sm text-gray-500 mb-6">자료관리에서 타입을 <strong>SETTLEMENT</strong>로 설정한 항목을 클릭하면 이 데이터가 정산 보고 UI로 표시됩니다.</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- 카테고리 & 기금 설정 -->
+                    <div class="lg:col-span-3 space-y-6">
+                        <div>
+                            <h4 class="text-xs font-black text-blue-600 uppercase mb-3 flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> 카테고리</h4>
+                            <div id="stl-cat-list" class="space-y-2 mb-3"></div>
+                            <button id="stl-add-cat" class="w-full py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200">+ 카테고리 추가</button>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black text-blue-600 uppercase mb-3 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> 기금 기본 정보</h4>
+                            <div class="space-y-2">
+                                <input type="text" id="stl-fund-total" placeholder="총 후원액" class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold">
+                                <input type="text" id="stl-fund-spent" placeholder="누적 집행액 (자동합산 시 공란)" class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold">
+                                <input type="text" id="stl-fund-remain" placeholder="잔여 기금 (자동계산 시 공란)" class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold">
+                                <button id="stl-save-fund" class="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm">기금 정보 저장</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 내역 등록 폼 -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <h4 class="text-xs font-black text-blue-600 uppercase mb-1 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i> 지출 내역 등록/수정</h4>
+                        <input type="hidden" id="stl-edit-id">
+                        <input type="date" id="stl-form-date" required class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm">
+                        <select id="stl-form-category" class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold">${catOptions()}</select>
+                        <input type="text" id="stl-form-item" placeholder="항목명" required class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm">
+                        <input type="text" id="stl-form-amount" placeholder="금액 (원)" required class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold">
+                        <input type="text" id="stl-form-recipient" placeholder="수취인" required class="w-full p-2.5 bg-gray-50 border rounded-xl text-sm">
+                        <div class="p-3 border-2 border-dashed rounded-xl text-center relative">
+                            <input type="file" id="stl-form-images" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <i data-lucide="image" class="w-5 h-5 mx-auto mb-1 text-gray-400"></i>
+                            <p id="stl-file-status" class="text-[10px] text-gray-400">이미지 업로드 (2MB 이하)</p>
+                            <div id="stl-img-edit-hint" class="hidden text-[9px] text-blue-500 font-bold mt-1">※ 미선택 시 기존 이미지 유지</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="stl-form-reset" class="flex-1 py-2.5 bg-gray-100 rounded-xl font-bold text-sm">취소</button>
+                            <button id="stl-form-save" class="flex-[2] py-2.5 bg-[#0f172a] text-white rounded-xl font-bold text-sm">내역 저장</button>
+                        </div>
+                    </div>
+
+                    <!-- 등록된 내역 목록 -->
+                    <div class="lg:col-span-5 bg-gray-50/50 rounded-xl p-4">
+                        <h4 class="text-xs font-black text-gray-400 uppercase mb-3">현재 등록된 내역</h4>
+                        <div id="stl-admin-list" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 기금 정보 로드
+        const fundSettings = s.settings || {};
+        document.getElementById('stl-fund-total').value = fundSettings.totalFund ? fmtInput(fundSettings.totalFund) : '';
+        document.getElementById('stl-fund-spent').value = fundSettings.manualSpent != null ? fmtInput(fundSettings.manualSpent) : '';
+        document.getElementById('stl-fund-remain').value = fundSettings.manualRemain != null ? fmtInput(fundSettings.manualRemain) : '';
+
+        // 숫자 포맷
+        ['stl-fund-total','stl-fund-spent','stl-fund-remain','stl-form-amount'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('input', (e) => { e.target.value = fmtInput(e.target.value); });
+        });
+
+        // 기금 저장
+        document.getElementById('stl-save-fund').onclick = () => {
+            s.settings = {
+                totalFund: parseNum(document.getElementById('stl-fund-total').value),
+                manualSpent: document.getElementById('stl-fund-spent').value === '' ? null : parseNum(document.getElementById('stl-fund-spent').value),
+                manualRemain: document.getElementById('stl-fund-remain').value === '' ? null : parseNum(document.getElementById('stl-fund-remain').value)
+            };
+            data.settlement = s;
+            DataStore.save(data);
+            toast('기금 정보가 저장되었습니다.');
+        };
+
+        // 카테고리 관리
+        window._stlUpdateCat = (i, val) => {
+            s.categories[i] = val;
+            data.settlement = s;
+            DataStore.save(data);
+            renderCats();
+        };
+        window._stlDelCat = (i) => {
+            if(confirm('카테고리를 삭제하시겠습니까?')) {
+                s.categories.splice(i, 1);
+                data.settlement = s;
+                DataStore.save(data);
+                renderCats();
+            }
+        };
+        document.getElementById('stl-add-cat').onclick = () => {
+            s.categories.push(`신규 카테고리 ${s.categories.length + 1}`);
+            data.settlement = s;
+            DataStore.save(data);
+            renderCats();
+        };
+
+        // 파일 -> base64
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        // 내역 저장
+        document.getElementById('stl-form-save').onclick = async () => {
+            const date = document.getElementById('stl-form-date').value;
+            const category = document.getElementById('stl-form-category').value;
+            const item = document.getElementById('stl-form-item').value;
+            const amount = parseNum(document.getElementById('stl-form-amount').value);
+            const recipient = document.getElementById('stl-form-recipient').value;
+            const editId = document.getElementById('stl-edit-id').value;
+
+            if(!date || !item || !amount) {
+                toast('날짜, 항목명, 금액은 필수입니다.');
+                return;
+            }
+
+            const fileInput = document.getElementById('stl-form-images');
+            let proofs = [];
+            if(fileInput.files.length > 0) {
+                for(let f of fileInput.files) {
+                    if(f.size > 2 * 1024 * 1024) { toast(`${f.name}: 2MB 초과`); return; }
+                    proofs.push(await toBase64(f));
+                }
+            } else if(editId) {
+                const existing = (s.data || []).find(e => e.id === editId);
+                if(existing) proofs = existing.proofs || [];
+            }
+
+            const entry = { id: editId || Date.now().toString(), date, category, item, amount, recipient, proofs };
+
+            if(editId) {
+                s.data = (s.data || []).map(e => e.id === editId ? entry : e);
+            } else {
+                if(!s.data) s.data = [];
+                s.data.push(entry);
+            }
+
+            data.settlement = s;
+            DataStore.save(data);
+
+            // 폼 리셋
+            document.getElementById('stl-edit-id').value = '';
+            document.getElementById('stl-form-date').value = '';
+            document.getElementById('stl-form-item').value = '';
+            document.getElementById('stl-form-amount').value = '';
+            document.getElementById('stl-form-recipient').value = '';
+            fileInput.value = '';
+            document.getElementById('stl-file-status').textContent = '이미지 업로드 (2MB 이하)';
+            document.getElementById('stl-img-edit-hint').classList.add('hidden');
+
+            renderList();
+            toast('내역이 저장되었습니다.');
+        };
+
+        // 폼 리셋
+        document.getElementById('stl-form-reset').onclick = () => {
+            document.getElementById('stl-edit-id').value = '';
+            document.getElementById('stl-form-date').value = '';
+            document.getElementById('stl-form-item').value = '';
+            document.getElementById('stl-form-amount').value = '';
+            document.getElementById('stl-form-recipient').value = '';
+            document.getElementById('stl-form-images').value = '';
+            document.getElementById('stl-file-status').textContent = '이미지 업로드 (2MB 이하)';
+            document.getElementById('stl-img-edit-hint').classList.add('hidden');
+        };
+
+        // 수정
+        window._stlEdit = (id) => {
+            const item = (s.data || []).find(e => e.id === id);
+            if(!item) return;
+            document.getElementById('stl-edit-id').value = item.id;
+            document.getElementById('stl-form-date').value = item.date;
+            document.getElementById('stl-form-category').value = item.category;
+            document.getElementById('stl-form-item').value = item.item;
+            document.getElementById('stl-form-amount').value = fmtInput(item.amount);
+            document.getElementById('stl-form-recipient').value = item.recipient;
+            document.getElementById('stl-img-edit-hint').classList.remove('hidden');
+        };
+
+        // 삭제
+        window._stlDel = (id) => {
+            if(confirm('내역을 삭제하시겠습니까?')) {
+                s.data = (s.data || []).filter(e => e.id !== id);
+                data.settlement = s;
+                DataStore.save(data);
+                renderList();
+            }
+        };
+
+        // 파일 선택 표시
+        document.getElementById('stl-form-images').addEventListener('change', (e) => {
+            const count = e.target.files.length;
+            document.getElementById('stl-file-status').textContent = count > 0 ? `${count}개 파일 선택됨` : '이미지 업로드 (2MB 이하)';
+        });
+
+        renderCats();
+        renderList();
     }
 };

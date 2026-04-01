@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TBFA-JEJU | 제주 유가족 후원 정산 보고</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 overflow-x-hidden">
+
+    <header class="bg-[#0f172a] text-white sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="shield-check" class="text-blue-400 w-6 h-6"></i>
+                <h1 class="font-bold text-sm md:text-lg tracking-tight">TBFA-JEJU <span class="font-light text-slate-400 ml-2 hidden sm:inline">제주 유가족 후원 정산</span></h1>
+            </div>
+            <a href="https://tbfa-jeju.com/" target="_blank" class="text-[10px] md:text-xs font-bold text-blue-400 border border-blue-400/30 px-3 py-1.5 rounded-full hover:bg-blue-400 hover:text-white transition">공식 홈페이지</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        <!-- Summary Dashboard -->
+        <section id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+            <div class="lg:col-span-1 grid grid-cols-1 gap-4">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">총 후원 모금액</p>
+                    <h3 id="displayTotalFund" class="text-2xl font-black text-[#0f172a]">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-[10px] font-bold text-red-500 uppercase mb-1">누적 집행액</p>
+                    <h3 id="totalExpenses" class="text-2xl font-black text-red-600">0</h3>
+                </div>
+                <div class="bg-[#0f172a] p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                    <p class="text-[10px] font-bold text-blue-400 uppercase mb-1">잔여 기금 총액</p>
+                    <h3 id="remainingBalance" class="text-2xl font-black text-white">0</h3>
+                    <div class="absolute -right-4 -bottom-4 opacity-10"><i data-lucide="wallet" size="80" class="text-white"></i></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm min-h-[300px]">
+                <div class="flex items-center justify-between mb-6">
+                    <h4 class="font-bold text-slate-800 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-500"></i> 목적별 집행 현황</h4>
+                    <span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold">REAL-TIME DATA</span>
+                </div>
+                <div class="h-[220px]">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settlement Table -->
+        <section id="settlement">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div class="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h4 class="font-bold text-lg">지출 세부 내역</h4>
+                    <select id="filterCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none font-bold">
+                        <option value="all">전체 항목 보기</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase border-b">
+                            <tr>
+                                <th class="px-4 md:px-8 py-4">일자</th>
+                                <th class="px-2 md:px-6 py-4">분류</th>
+                                <th class="px-2 md:px-6 py-4">항목명</th>
+                                <th class="px-2 md:px-6 py-4 text-right">금액</th>
+                                <th class="px-2 md:px-6 py-4 hidden sm:table-cell">수취인</th>
+                                <th class="px-4 md:px-8 py-4 text-center">증빙</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settlementTableBody" class="divide-y text-sm"></tbody>
+                    </table>
+                </div>
+                <div id="noDataMessage" class="hidden py-20 text-center text-slate-300">내역이 없습니다.</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="fixed inset-0 bg-slate-900/98 backdrop-blur-xl z-[150] hidden flex flex-col p-4">
+        <div class="max-w-7xl mx-auto w-full flex-1 flex flex-col bg-white rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="font-bold text-xl">통합 정산 관리 시스템</h2>
+                    <p class="text-xs text-slate-500">브라우저 로컬 스토리지에 데이터가 유지됩니다. 타 기기 이동 시 백업/복구 기능을 이용하세요.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="finalSaveBtn" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition">브라우저 최종 저장</button>
+                    <button onclick="closeModal('adminPanel')" class="bg-slate-200 p-2.5 rounded-xl hover:bg-red-100 hover:text-red-600 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-0">
+                <!-- Sync & Management Column (NEW) -->
+                <div class="lg:col-span-3 border-r bg-slate-50 p-6 space-y-8 overflow-y-auto max-h-[70vh] lg:max-h-none">
+                    <div>
+                        <h3 class="text-xs font-black text-indigo-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="refresh-cw" class="w-4 h-4"></i> 데이터 동기화 및 관리</h3>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-4">
+                            <div>
+                                <p class="text-[10px] text-slate-500 mb-2 leading-relaxed">로컬의 모든 데이터를 JSON 파일로 내보냅니다.</p>
+                                <button id="exportJsonBtn" class="w-full py-2.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 flex items-center justify-center gap-2">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i> 백업 데이터 다운로드
+                                </button>
+                            </div>
+                            <div class="pt-2 border-t">
+                                <p class="text-[10px] text-slate-500 mb-2 leading-relaxed">JSON 백업 파일을 선택하여 데이터를 복구합니다.</p>
+                                <input type="file" id="importFileInput" class="hidden" accept=".json">
+                                <button id="importJsonBtn" class="w-full py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 flex items-center justify-center gap-2">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> 백업 파일 불러오기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xs font-black text-emerald-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> 오프라인 아카이빙</h3>
+                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                            <p class="text-[10px] text-emerald-700 mb-3 leading-relaxed">
+                                <strong>[강력 권장]</strong> 현재 입력된 모든 데이터가 소스코드에 포함된 HTML 파일을 생성합니다. 
+                                이 파일을 서버에 올리거나 배포하면 별도 데이터 이동 없이 즉시 내용이 표시됩니다.
+                            </p>
+                            <button id="downloadHtmlBtn" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md flex items-center justify-center gap-2">
+                                <i data-lucide="file-code" class="w-3.5 h-3.5"></i> 데이터 포함 HTML 다운로드
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Config & Fund Info Column -->
+                <div class="lg:col-span-3 border-r divide-y overflow-y-auto max-h-[70vh] lg:max-h-none">
+                    <div class="p-6">
+                        <h3 class="text-xs font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> 카테고리 관리</h3>
+                        <div id="categoryManagerList" class="space-y-2 mb-4"></div>
+                        <button onclick="window.addCategory()" class="w-full py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200">+ 새 카테고리 추가</button>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xs font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> 기금 기본 정보</h3>
+                        <form id="fundInfoForm" class="space-y-3">
+                            <input type="text" id="fundTotal" placeholder="총 후원액" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-bold">
+                            <input type="text" id="fundSpent" placeholder="누적 집행액 (자동합산 시 공란)" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-bold">
+                            <input type="text" id="fundRemain" placeholder="잔여 기금 (자동계산 시 공란)" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-bold">
+                            <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm">기본 정보 임시 저장</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Main Action Column -->
+                <div class="lg:col-span-3 border-r p-6 overflow-y-auto max-h-[70vh] lg:max-h-none">
+                    <h3 class="text-xs font-black text-blue-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i> 지출 내역 등록/수정</h3>
+                    <form id="adminForm" class="space-y-4">
+                        <input type="hidden" id="editId">
+                        <input type="date" id="formDate" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                        <select id="formCategory" class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-bold"></select>
+                        <input type="text" id="formItem" placeholder="항목명" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                        <input type="text" id="formAmount" placeholder="금액 (원)" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm font-bold">
+                        <input type="text" id="formRecipient" placeholder="수취인" required class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                        
+                        <div class="p-4 border-2 border-dashed rounded-xl text-center group hover:border-blue-400 transition relative">
+                            <input type="file" id="formImages" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <i data-lucide="image" class="w-6 h-6 mx-auto mb-1 text-slate-400"></i>
+                            <p id="fileStatus" class="text-[10px] text-slate-400">이미지 업로드 (2MB 이하 권장)</p>
+                            <div id="imageEditIndicator" class="hidden text-[9px] text-blue-500 font-bold">※ 미선택 시 기존 이미지 유지</div>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button type="button" id="resetFormBtn" class="flex-1 py-3 bg-slate-100 rounded-xl font-bold text-sm">취소</button>
+                            <button type="submit" class="flex-[2] py-3 bg-[#0f172a] text-white rounded-xl font-bold text-sm">내역 저장</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- List Column -->
+                <div class="lg:col-span-3 p-6 bg-slate-50/50 overflow-y-auto max-h-[70vh] lg:max-h-none">
+                    <h3 class="text-xs font-black text-slate-400 uppercase mb-4">현재 등록된 내역</h3>
+                    <div id="adminList" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals (Proof & Login) -->
+    <div id="proofModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h5 id="proofTitle" class="font-bold">증빙 자료</h5>
+                <button onclick="closeModal('proofModal')" class="p-2 bg-slate-100 rounded-lg"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div id="modalContent" class="p-6 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <div id="loginPrompt" class="fixed inset-0 bg-slate-900/95 z-[210] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full text-center">
+            <h5 class="text-xl font-bold mb-6">ADMIN AUTH</h5>
+            <input type="password" id="adminPassword" class="w-full bg-slate-50 border-2 rounded-2xl p-4 mb-6 text-center text-xl tracking-[0.5em] outline-none" placeholder="••••••••">
+            <div class="flex gap-2">
+                <button onclick="closeModal('loginPrompt')" class="flex-1 py-3 text-slate-400 font-bold">닫기</button>
+                <button id="authBtn" class="flex-1 py-3 bg-[#0f172a] text-white rounded-xl font-bold">인증</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white border-t py-12 mt-20">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-[11px] text-slate-400 mb-6 uppercase tracking-widest font-bold">© 2026 TBFA-JEJU Settlement Report System</p>
+            <button id="adminLoginBtn" class="text-[9px] text-slate-300 hover:text-slate-900 transition-all font-bold border px-4 py-1.5 rounded-full">ADMIN ACCESS</button>
+        </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+    <script>
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

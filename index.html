@@ -75,7 +75,7 @@
     <!-- Resource Modal -->
     <div id="resource-modal" class="fixed inset-0 z-[5000] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm modal-backdrop" data-target="resource-modal"></div>
-        <div class="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative z-10 transform scale-95 transition-all duration-300 max-h-[90vh] flex flex-col">
+        <div id="res-modal-container" class="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative z-10 transform scale-95 transition-all duration-300 max-h-[90vh] flex flex-col">
             <button class="modal-close-btn absolute top-5 right-5 text-gray-400 hover:text-gray-600 z-20" data-target="resource-modal"><i data-lucide="x" class="w-5 h-5"></i></button>
             <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-4 shrink-0">
                 <i data-lucide="file-text" class="w-5 h-5 text-primary"></i>
@@ -588,6 +588,7 @@
                 <button data-tab="flow" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="edit" class="w-4 h-4"></i> FLOW 편집</button>
                 <button data-tab="community" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="message-circle" class="w-4 h-4"></i> 커뮤니티 승인</button>
                 <button data-tab="stats" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> 통계</button>
+                <button data-tab="settlement" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="calculator" class="w-4 h-4"></i> 정산 관리</button>
                 <button data-tab="settings" class="admin-tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-3"><i data-lucide="database" class="w-4 h-4"></i> 설정</button>
             </nav>
             <div class="p-4 border-t border-gray-100">

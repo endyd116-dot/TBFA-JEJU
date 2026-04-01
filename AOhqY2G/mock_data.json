@@ -1,0 +1,29 @@
+[
+    {
+        "id": "1",
+        "date": "2026-03-15",
+        "category": "1. 법률 및 소송 지원",
+        "item": "순직 인정 행정소송 변호사 선임비",
+        "amount": 5500000,
+        "recipient": "법무법인 한울",
+        "proofs": ["https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&q=80&w=400"]
+    },
+    {
+        "id": "2",
+        "date": "2026-03-20",
+        "category": "2. 유가족 긴급 지원",
+        "item": "1차 긴급 생계 지원금",
+        "amount": 3000000,
+        "recipient": "유가족 본인(배우자)",
+        "proofs": ["https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&q=80&w=400"]
+    },
+    {
+        "id": "3",
+        "date": "2026-03-25",
+        "category": "4. 캠페인 운영 및 홍보",
+        "item": "추모 집회 현수막 및 피켓 제작",
+        "amount": 850000,
+        "recipient": "제주기획(주)",
+        "proofs": ["https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&q=80&w=400"]
+    }
+]
