@@ -2997,7 +2997,7 @@ ${htmlTables}
                         <div class="p-3 border-2 border-dashed rounded-xl text-center relative">
                             <input type="file" id="stl-form-images" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
                             <i data-lucide="image" class="w-5 h-5 mx-auto mb-1 text-gray-400"></i>
-                            <p id="stl-file-status" class="text-[10px] text-gray-400">이미지 업로드 (2MB 이하)</p>
+                            <p id="stl-file-status" class="text-[10px] text-gray-400">이미지 업로드 (10MB 이하)</p>
                             <div id="stl-img-edit-hint" class="hidden text-[9px] text-blue-500 font-bold mt-1">※ 미선택 시 기존 이미지 유지</div>
                         </div>
                         <div class="flex gap-2">
@@ -3087,7 +3087,7 @@ ${htmlTables}
             let proofs = [];
             if(fileInput.files.length > 0) {
                 for(let f of fileInput.files) {
-                    if(f.size > 2 * 1024 * 1024) { toast(`${f.name}: 2MB 초과`); return; }
+                    if(f.size > 10 * 1024 * 1024) { toast(`${f.name}: 10MB 초과`); return; }
                     proofs.push(await toBase64(f));
                 }
             } else if(editId) {
@@ -3114,7 +3114,7 @@ ${htmlTables}
             document.getElementById('stl-form-amount').value = '';
             document.getElementById('stl-form-recipient').value = '';
             fileInput.value = '';
-            document.getElementById('stl-file-status').textContent = '이미지 업로드 (2MB 이하)';
+            document.getElementById('stl-file-status').textContent = '이미지 업로드 (10MB 이하)';
             document.getElementById('stl-img-edit-hint').classList.add('hidden');
 
             renderList();
@@ -3129,7 +3129,7 @@ ${htmlTables}
             document.getElementById('stl-form-amount').value = '';
             document.getElementById('stl-form-recipient').value = '';
             document.getElementById('stl-form-images').value = '';
-            document.getElementById('stl-file-status').textContent = '이미지 업로드 (2MB 이하)';
+            document.getElementById('stl-file-status').textContent = '이미지 업로드 (10MB 이하)';
             document.getElementById('stl-img-edit-hint').classList.add('hidden');
         };
 
@@ -3159,7 +3159,7 @@ ${htmlTables}
         // 파일 선택 표시
         document.getElementById('stl-form-images').addEventListener('change', (e) => {
             const count = e.target.files.length;
-            document.getElementById('stl-file-status').textContent = count > 0 ? `${count}개 파일 선택됨` : '이미지 업로드 (2MB 이하)';
+            document.getElementById('stl-file-status').textContent = count > 0 ? `${count}개 파일 선택됨` : '이미지 업로드 (10MB 이하)';
         });
 
         renderCats();
